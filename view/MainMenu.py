@@ -4,7 +4,7 @@ import view.AdminMenu as AdminMenu
 import sqlite3
 
 
-def init_main_menu(gui, switch_to_customer_menu, switch_to_admin_menu):
+def init_main_menu(gui, switch_to_customer_menu, switch_to_admin_menu, go_to_main_menu):
     user_type_tab = ttk.Frame(gui.tabs)
     gui.add_tab(user_type_tab, text="User Type")
 
@@ -13,12 +13,12 @@ def init_main_menu(gui, switch_to_customer_menu, switch_to_admin_menu):
 
     ttk.Button(
         user_type_tab, text="Click here to get customer menu", width=40,
-        command=switch_to_customer_menu
+        command= switch_to_customer_menu
     ).pack(side="top", padx=0, pady=20)
 
     ttk.Button(
         user_type_tab, text="Click here to get admin menu", width=40,
-        command=switch_to_admin_menu
+        command= switch_to_admin_menu
     ).pack(side="top", padx=0, pady=30)
 
     gui.tabs.select(user_type_tab)
