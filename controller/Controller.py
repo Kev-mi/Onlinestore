@@ -9,6 +9,7 @@ import view.MainMenu as MainMenu
 import view.AdminMenu as AdminMenu
 import view.CustomerMenu as CustomerMenu
 from model.CustomerManager import CustomerManager
+from model.AdminManager import AdminManager
 
 
 if __name__ == '__main__':
@@ -21,15 +22,38 @@ if __name__ == '__main__':
     gui = Gui(db_manager.cursor)
 
     customer_manager = CustomerManager(db_manager.cursor)
+    admin_manager = AdminManager(db_manager.cursor)
 
     def switch_to_customer_menu():
         CustomerMenu.customer_menu_tabs_init(gui, customer_manager)
 
     def switch_to_admin_menu():
-        AdminMenu.admin_menu_tabs_init(gui)
+        AdminMenu.admin_menu_tabs_init(gui, admin_manager)
+
+
+    gui.switch_to_customer_menu = switch_to_customer_menu
+    gui.switch_to_admin_menu = switch_to_admin_menu
 
     # init main menu method
-    MainMenu.init_main_menu(gui, switch_to_customer_menu, switch_to_admin_menu)
+    MainMenu.init_main_menu(
+        gui,
+        switch_to_customer_menu,
+        switch_to_admin_menu,
+        lambda: go_to_main_menu(gui, switch_to_customer_menu, switch_to_admin_menu, customer_manager)
+    )
+
 
     # Run the application
     gui.run()
+
+
+def go_to_main_menu(gui, switch_to_customer_menu, switch_to_admin_menu, customer_manager):
+
+    gui.remove_all_tabs()
+
+    MainMenu.init_main_menu(
+        gui,
+        switch_to_customer_menu,
+        switch_to_admin_menu,
+        lambda: go_to_main_menu(gui, switch_to_customer_menu, switch_to_admin_menu, customer_manager)
+    )
