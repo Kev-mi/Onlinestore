@@ -78,6 +78,12 @@ class CustomerManager:
         self.cursor.execute(query, tuple(values))
         return self.cursor.fetchall()
 
+
+    def set_customer_logged_in(self, logged_in_status):
+        self.customer_logged_in = logged_in_status
+
+    def set_current_user_name(self, current_user_name):
+        self.current_user_name = current_user_name
     # method that gets all discounted products
     def get_discounted_products(self):
 
