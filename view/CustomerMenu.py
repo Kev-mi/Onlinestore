@@ -1,23 +1,31 @@
-from tkinter import ttk, Frame, Label, Entry, Button, TOP
-
+from tkinter import ttk, messagebox, simpledialog, filedialog, Button, Text, Scrollbar, Frame, TOP, END, VERTICAL, Entry, Label
+import view.MainMenu as MainMenu
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from controller.Controller import go_to_main_menu
 
 def customer_menu(gui, customer_manager):
 
-    def customer_tab_change(gui):
+    def customer_tab_change(gui, customer_manager):
         current_tab_index = gui.tabs.index(gui.tabs.select())
         print(f"selected customer index is: {current_tab_index}")
         switch_case = {
-            0: lambda: customer_search_products_tab(gui.tabs.select(), customer_manager),
-            1: lambda: customer_sign_up(gui.tabs.nametowidget(gui.tabs.select()),customer_manager),
-            2: lambda: customer_main_menu(gui.tabs.nametowidget(gui.tabs.select())),
-            3: lambda: customer_login(),
-            4: lambda: customer_logout_menu(),
-            5: lambda: customer_current_order_tab(),
+            0: lambda: customer_search_products_tab(gui.tabs.nametowidget(gui.tabs.select()), customer_manager),
+            1: lambda: customer_sign_up(gui.tabs.nametowidget(gui.tabs.select()), customer_manager),
+            2: lambda: customer_main_menu(gui.tabs.nametowidget(gui.tabs.select()), gui, customer_manager),
+            3: lambda: customer_login(gui.tabs.nametowidget(gui.tabs.select())),
+            4: lambda: customer_logout_menu(gui.tabs.nametowidget(gui.tabs.select())),
+            5: lambda: customer_current_order_tab(gui.tabs.nametowidget(gui.tabs.select())),
             6: lambda: customer_order_history_tab(),
         }
 
-    switch_case.get(current_tab_index)
-    #gui.tabs.bind("<<NotebookTabChanged>>", lambda event: customer_tab_change(gui))
+        # this is because get just gets the number but doesn't call the switch_case dictionairy so if func lines are needed to call the dictionairy
+        switch_case.get(current_tab_index)
+        func = switch_case.get(current_tab_index)
+        if func:
+            func()
+
+    gui.tabs.bind("<<NotebookTabChanged>>", lambda event: customer_tab_change(gui, customer_manager))
 
 
 def customer_search_products_tab(customer_tab_1, customer_manager):
@@ -137,21 +145,21 @@ def show_discounted_products(customer_manager, product_frame):
 
 # adds discount as clickable button
 def add_product_to_frame(product_frame, product, discount_rate=None):
-
     discount_text = f" (Discount: {discount_rate}%)" if discount_rate else ""
     btn_text = f"Product ID: {product[0]} | Name: {product[6]} | Price: {round(product[3] * (1 - (discount_rate or 0) / 100), 2)} | Quantity: {product[1]} | Supplier: {product[5]}{discount_text}"
-    Button(product_frame, text=btn_text, width=120).pack(side=TOP, padx=5, pady=5)
+
+    next_row = len(product_frame.grid_slaves())
+    Button(product_frame, text=btn_text, width=120).grid(row=next_row, column=0, padx=5, pady=5, sticky="w")
 
 
-def customer_main_menu(customer_tab_3):
+def customer_main_menu(customer_tab_3, gui, customer_manager):
 
     customer_login_button = ttk.Button(customer_tab_3, text="Go to main menu", width=40,
-                                       command=lambda: customer_go_to_main_menu())
+                                       command=lambda: customer_go_to_main_menu(gui, customer_manager))
     customer_login_button.grid(row=0, column=1, padx=10, pady=10, sticky="w")
 
 
-
-def customer_login():
+def customer_login(customer_tab_4):
 
     customer_username_login_label = ttk.Label(customer_tab_4, text="Username:")
     customer_username_login_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
@@ -178,18 +186,19 @@ def submit_customer_login_info():
         customer_menu()
 
 
-def customer_go_to_main_menu():
-    global customer_logged_in
-    global current_user_name
-    # this is to clear all the admin tabs
-    for tab_id in tabs.tabs():
-        tabs.forget(tab_id)
+def customer_go_to_main_menu(gui, customer_manager):
+
     # this is to go back to main menu
-    customer_logged_in = False
-    current_user_name = ""
+    customer_manager.set_current_user_name("")
+    customer_manager.set_customer_logged_in(False)
+
     #this is also to remove the window so windows doesn't keep adding up
-    root.destroy()
-    main()
+    go_to_main_menu(
+        gui,
+        gui.switch_to_customer_menu,
+        gui.switch_to_admin_menu,
+        customer_manager
+    )
 
 
 def submit_customer_sign_up_info(customer_manager):
@@ -198,7 +207,7 @@ def submit_customer_sign_up_info(customer_manager):
         customer_menu()
 
 
-def customer_logout_menu():
+def customer_logout_menu(customer_tab_5):
 
     customer_logout_button = ttk.Button(customer_tab_5, text="logout", width=40,
                                        command=lambda: customer_logout_function())
@@ -218,7 +227,7 @@ def customer_logout_function():
     customer_menu()
 
 
-def customer_current_order_tab():
+def customer_current_order_tab(customer_tab_6):
     result_text = tk.Text(customer_tab_6, width=137, height=40)
     result_text.grid(row=3, column=0, columnspan=4, padx=10, pady=10)
 
