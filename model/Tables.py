@@ -11,7 +11,6 @@ def init_tables(cursor):
     cursor.execute('''DROP TABLE IF EXISTS Shopping_list''')
     cursor.execute('''DROP TABLE IF EXISTS Shopping_list_item''')
 
-
     cursor.execute('''
         CREATE TABLE User (
             user_id INTEGER PRIMARY KEY,
@@ -20,7 +19,6 @@ def init_tables(cursor):
             user_type varchar(8) CHECK(user_type IN ('customer', 'admin'))
         );
     ''')
-
 
     cursor.execute('''
         CREATE TABLE Customer_info (
@@ -69,12 +67,9 @@ def init_tables(cursor):
         );
     ''')
 
-
     cursor.execute('''
         CREATE TABLE Shopping_list (
             Shopping_list_id INTEGER PRIMARY KEY,
-            phone_number VARCHAR(40),
-            address VARCHAR(100),
             username VARCHAR(30),
             order_datetime DATE,
             confirmed_order BOOLEAN DEFAULT FALSE,
@@ -83,7 +78,6 @@ def init_tables(cursor):
             FOREIGN KEY (username) REFERENCES User(username)
         );
     ''')
-
 
     cursor.execute('''
         CREATE TABLE Shopping_list_item (
@@ -107,10 +101,8 @@ def init_tables(cursor):
         discount_category varchar(40),
         current_date DATE DEFAULT '{}',
         start_date DATE CHECK(start_date <= end_date),
-        end_date DATE,
-        product_code int,
-        FOREIGN KEY (product_code) REFERENCES Product(product_code)
-    );
+        end_date DATE
+        );
     ''')
 
 
