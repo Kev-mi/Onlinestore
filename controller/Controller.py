@@ -10,7 +10,7 @@ import view.AdminMenu as AdminMenu
 import view.CustomerMenu as CustomerMenu
 from model.CustomerManager import CustomerManager
 from model.AdminManager import AdminManager
-
+import datetime
 
 if __name__ == '__main__':
     # Initialize the database
@@ -23,6 +23,8 @@ if __name__ == '__main__':
 
     customer_manager = CustomerManager(db_manager.cursor)
     admin_manager = AdminManager(db_manager.cursor)
+
+    admin_manager.set_current_date(datetime.date.today().strftime("%Y-%m-%d"))
 
     def switch_to_customer_menu():
         CustomerMenu.customer_menu_tabs_init(gui, customer_manager)
