@@ -14,6 +14,8 @@ class Gui:
         self.tabs.pack(fill=tk.BOTH, expand=True)
         self.tabs_list = []
 
+        self.order_history_buttons = {}
+
     # method that adds a tab
     def add_tab(self, tab, text):
         self.tabs.add(tab, text=text)
