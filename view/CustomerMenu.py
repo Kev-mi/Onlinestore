@@ -3,6 +3,8 @@ import view.MainMenu as MainMenu
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from controller.Controller import go_to_main_menu
+import tkinter as tk
+
 
 def customer_menu(gui, customer_manager):
 
@@ -13,10 +15,10 @@ def customer_menu(gui, customer_manager):
             0: lambda: customer_search_products_tab(gui.tabs.nametowidget(gui.tabs.select()), customer_manager),
             1: lambda: customer_sign_up(gui.tabs.nametowidget(gui.tabs.select()), customer_manager),
             2: lambda: customer_main_menu(gui.tabs.nametowidget(gui.tabs.select()), gui, customer_manager),
-            3: lambda: customer_login(gui.tabs.nametowidget(gui.tabs.select())),
+            3: lambda: customer_login(gui.tabs.nametowidget(gui.tabs.select()), gui, customer_manager),
             4: lambda: customer_logout_menu(gui.tabs.nametowidget(gui.tabs.select())),
-            5: lambda: customer_current_order_tab(gui.tabs.nametowidget(gui.tabs.select())),
-            6: lambda: customer_order_history_tab(),
+            5: lambda: customer_current_order_tab(gui.tabs.nametowidget(gui.tabs.select()), gui, customer_manager),
+            6: lambda: customer_order_history_tab(gui, customer_manager),
         }
 
         # this is because get just gets the number but doesn't call the switch_case dictionairy so if func lines are needed to call the dictionairy
@@ -159,7 +161,7 @@ def customer_main_menu(customer_tab_3, gui, customer_manager):
     customer_login_button.grid(row=0, column=1, padx=10, pady=10, sticky="w")
 
 
-def customer_login(customer_tab_4):
+def customer_login(customer_tab_4, gui, customer_manager):
 
     customer_username_login_label = ttk.Label(customer_tab_4, text="Username:")
     customer_username_login_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
@@ -177,7 +179,7 @@ def customer_login(customer_tab_4):
                                         command=lambda: submit_customer_login_info())
     customer_login_button.grid(row=9, column=1, padx=10, pady=10, sticky="w")
 
-    customer_menu()
+    customer_menu(gui, customer_manager)
 
 
 def submit_customer_login_info():
@@ -227,17 +229,17 @@ def customer_logout_function():
     customer_menu()
 
 
-def customer_current_order_tab(customer_tab_6):
+def customer_current_order_tab(customer_tab_6, gui, customer_manager):
     result_text = tk.Text(customer_tab_6, width=137, height=40)
     result_text.grid(row=3, column=0, columnspan=4, padx=10, pady=10)
 
-    def display_all_products():
-        cursor.execute('SELECT Shopping_list_id FROM Shopping_list WHERE username = ? AND confirmed_order = FALSE ORDER BY Shopping_list_id DESC LIMIT 1', (current_user_name,))
+    def display_all_products(gui):
+        gui.cursor.execute('SELECT Shopping_list_id FROM Shopping_list WHERE username = ? AND confirmed_order = FALSE ORDER BY Shopping_list_id DESC LIMIT 1', (current_user_name,))
         active_shopping_list = cursor.fetchone()
 
         if active_shopping_list:
             shopping_list_id = active_shopping_list[0]
-            cursor.execute('SELECT * FROM Shopping_list_item WHERE Shopping_list_id = ? AND ordered = FALSE', (shopping_list_id,))
+            gui.cursor.execute('SELECT * FROM Shopping_list_item WHERE Shopping_list_id = ? AND ordered = FALSE', (shopping_list_id,))
             products = cursor.fetchall()
         else:
             products = []
@@ -246,12 +248,12 @@ def customer_current_order_tab(customer_tab_6):
         total_cost = 0
 
         for product in products:
-            cursor.execute('SELECT * FROM Product WHERE product_code = ?', (product[2],))
+            gui.cursor.execute('SELECT * FROM Product WHERE product_code = ?', (product[2],))
             product_details = cursor.fetchone()
 
             discount_code = product_details[-1]
 
-            cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (discount_code,))
+            gui.cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (discount_code,))
             discount = cursor.fetchone()
 
             if discount is not None:
@@ -268,30 +270,46 @@ def customer_current_order_tab(customer_tab_6):
                 total_cost += discounted_cost
                 result_text.insert(tk.END, f"Product Name: {product_details[6]} Quantity in order: {product[3]} Order cost: {round(discounted_cost, 2)}\n")
 
-    tabs.bind("<<NotebookTabChanged>>", lambda event: display_all_products())
-    display_all_products()
+    gui.tabs.bind("<<NotebookTabChanged>>", lambda event: display_all_products(gui))
 
     submit_supplier_info_label = ttk.Button(customer_tab_6, text="Place order", width=40, command=lambda: customer_place_order())
     submit_supplier_info_label.grid(row=6, column=1, padx=10, pady=10, sticky="w")
 
-    customer_menu()
+    customer_menu(gui, customer_manager)
 
 
-def customer_order_history_tab():
+def create_order_history_button(shopping_list_id):
+    cursor.execute('SELECT total_cost FROM Shopping_list WHERE Shopping_list_id = ?', (shopping_list_id,))
+    total_cost = cursor.fetchone()[0]
 
-    global order_history_buttons
-    cursor.execute("SELECT * FROM Shopping_list WHERE username = ? AND placed_order = TRUE", (current_user_name,))
-    shopping_lists = cursor.fetchall()
+    order_history_frame = Frame(customer_tab_7)
+    order_history_frame.grid(row=len(order_history_buttons), column=0, columnspan=4, padx=5, pady=5)
+
+    btn = Button(order_history_frame,
+                 text=f"Shopping List Number: {shopping_list_id} Total Price: {round(total_cost, 2)} \n",
+                 command=lambda idx=shopping_list_id: select_shopping_list_customer(idx),
+                 width=120)
+    btn.grid(row=0, column=0, padx=5, pady=5, sticky="w")  # Use `grid` here for consistency
+
+
+    order_history_buttons[shopping_list_id] = btn
+
+
+def customer_order_history_tab(gui, customer_manager):
+
+
+    gui.cursor.execute("SELECT * FROM Shopping_list WHERE username = ? AND placed_order = TRUE", (customer_manager.get_current_user_name(),))
+    shopping_lists = gui.cursor.fetchall()
 
     # iterating of the orders placed
-    for button in order_history_buttons.values():
+    for button in gui.order_history_buttons.values():
         button.destroy()
-    order_history_buttons.clear()
+    gui.order_history_buttons.clear()
 
     if shopping_lists:
         for shopping_list in shopping_lists:
             shopping_list_id = shopping_list[0]
-            cursor.execute('SELECT total_cost FROM Shopping_list WHERE Shopping_list_id = ?', (shopping_list_id,))
+            gui.cursor.execute('SELECT total_cost FROM Shopping_list WHERE Shopping_list_id = ?', (shopping_list_id,))
             total_cost = cursor.fetchone()[0]
             if total_cost is not None:
                 create_order_history_button(shopping_list_id)
