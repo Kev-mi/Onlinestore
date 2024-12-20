@@ -84,7 +84,12 @@ class CustomerManager:
 
     def set_current_user_name(self, current_user_name):
         self.current_user_name = current_user_name
+
+    def get_current_user_name(self):
+        return self.current_user_name
     # method that gets all discounted products
+
+
     def get_discounted_products(self):
 
         self.cursor.execute("SELECT * FROM Product")
