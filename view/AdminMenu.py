@@ -1,7 +1,7 @@
 from tkinter import ttk, messagebox, simpledialog, filedialog, Button, Text, Scrollbar, Frame, TOP, END, VERTICAL, Entry, Label
 #from view.MainMenu import init_main_menu
 
-def admin_show_suppliers(admin_tab_1):
+def admin_show_suppliers(admin_tab_1, gui):
 
     # adjust height and width in the result box
     result_text_supplier = Text(admin_tab_1, width=160, height=60)
@@ -14,9 +14,9 @@ def admin_show_suppliers(admin_tab_1):
     result_text_supplier.insert('end', header)
     result_text_supplier.insert('end', '-' * 160 + '\n')
 
-    def display_all_supplier():
-        cursor.execute('''SELECT * FROM Supplier''')
-        suppliers = cursor.fetchall()
+    def display_all_supplier(gui):
+        gui.cursor.execute('''SELECT * FROM Supplier''')
+        suppliers = gui.cursor.fetchall()
 
         result_text_supplier.delete('3.0', 'end')
         # inserting the supplier info inputted
@@ -26,9 +26,7 @@ def admin_show_suppliers(admin_tab_1):
             result_text_supplier.insert('end', '-' * 160 + '\n')
 
     # function that displays suppliers when the tab is clicked on
-    admin_tab_1.bind("<Visibility>", lambda event: display_all_supplier())
-
-    display_all_supplier()
+    admin_tab_1.bind("<Visibility>", lambda event: display_all_supplier(gui))
 
 
 def admin_menu(gui, admin_manager):
@@ -39,13 +37,13 @@ def admin_menu(gui, admin_manager):
         current_tab_index = gui.tabs.index(gui.tabs.select())
 
         switch_case = {
-            0: lambda: admin_show_suppliers(gui.tabs.nametowidget(gui.tabs.select())),
-            1: lambda: admin_search_products_tab(gui.tabs.nametowidget(gui.tabs.select(), admin_manager)),
+            0: lambda: admin_show_suppliers(gui.tabs.nametowidget(gui.tabs.select()), gui),
+            1: lambda: admin_search_products_tab(gui.tabs.nametowidget(gui.tabs.select()),admin_manager, gui),
             2: lambda: admin_add_supplier_tab(gui.tabs.nametowidget(gui.tabs.select())),
-            3: lambda: admin_order_history_tab(gui.tabs.nametowidget(gui.tabs.select())),
-            4: lambda: admin_add_product_tab(gui.tabs.nametowidget(gui.tabs.select())),
+            3: lambda: admin_order_history_tab(gui.tabs.nametowidget(gui.tabs.select()), gui),
+            4: lambda: admin_add_product_tab(gui.tabs.nametowidget(gui.tabs.select()), gui, admin_manager),
             5: lambda: admin_add_discount_tab(gui.tabs.nametowidget(gui.tabs.select())),
-            6: lambda: admin_assign_discount(gui.tabs.nametowidget(gui.tabs.select())),
+            6: lambda: admin_assign_discount(gui.tabs.nametowidget(gui.tabs.select()), gui),
             7: lambda: admin_main_menu(gui.tabs.nametowidget(gui.tabs.select())),
         }
 
@@ -58,7 +56,7 @@ def admin_menu(gui, admin_manager):
     gui.tabs.bind("<<NotebookTabChanged>>", lambda event: admin_tab_change(gui, admin_manager))
 
 
-def admin_search_products_tab(admin_tab_2, admin_manager):
+def admin_search_products_tab(admin_tab_2, admin_manager, gui):
 
     product_id_search_label = Label(admin_tab_2, text="Product ID:")
     product_id_search_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
@@ -96,8 +94,8 @@ def admin_search_products_tab(admin_tab_2, admin_manager):
     # this is to add dotted lines below
     result_text.insert('end', '-' * 137 + '\n')
 
-    def display_all_products():
-        cursor.execute('''SELECT * FROM Product''')
+    def display_all_products(gui):
+        gui.cursor.execute('''SELECT * FROM Product''')
         products = cursor.fetchall()
 
         result_text.delete('3.0', 'end')
@@ -116,7 +114,7 @@ def admin_search_products_tab(admin_tab_2, admin_manager):
                 result_text.insert('end', '-' * 137 + '\n')
 
     # function that displays products when the tab is clicked on
-    admin_tab_2.bind("<Visibility>", lambda event: display_all_products())
+    admin_tab_2.bind("<Visibility>", lambda event: display_all_products(gui))
 
     product_code_label_2 = Label(admin_tab_2, text="Product ID:")
     product_code_label_2.grid(row=0, column=4, padx=10, pady=10, sticky="w")
@@ -129,7 +127,7 @@ def admin_search_products_tab(admin_tab_2, admin_manager):
     submit_product_to_remove_label.grid(row=1, column=4, padx=10, pady=10, sticky="w")
 
     # showing current date
-    current_date_label = Label(admin_tab_2, text="Current date: " + str(current_date_str))
+    current_date_label = Label(admin_tab_2, text="Current date: " + str(admin_manager.get_current_date))
     current_date_label.grid(row=2, column=4, padx=10, pady=10, sticky="w")
 
     def display_search_results(products):
@@ -147,7 +145,7 @@ def admin_search_products_tab(admin_tab_2, admin_manager):
         for product in products:
 
             if product[9] is not None:
-                cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (product[9],))
+                gui.cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (product[9],))
                 discount = cursor.fetchone()
                 result_text_search.insert('end',
                                    f"{product[0]:<10} | {product[1]:<16} | {product[6]:<25}| {product[3]:<10}| {product[5]:<25}| {product[2]:<15}| {discount[4]}| {discount[5]}\n")
@@ -199,8 +197,6 @@ def admin_search_products_tab(admin_tab_2, admin_manager):
         if validate_search_info():
             result_text.grid_forget()
             admin_product_search()
-
-    display_all_products()
 
 
 def admin_main_menu(admin_tab_8):
@@ -342,7 +338,7 @@ def validate_discount_add():
     return True
 
 
-def admin_add_supplier_tab():
+def admin_add_supplier_tab(admin_tab_3):
     global name_input, street_input, zip_code_input, city_input, country_input, phone_number_input
 
     name_label = Label(admin_tab_3, text="Name:")
@@ -440,15 +436,15 @@ def admin_logout():
     main()
 
 
-def admin_order_history_tab(admin_tab_4):
-    cursor.execute("SELECT * FROM Shopping_list")
-    shopping_lists = cursor.fetchall()
+def admin_order_history_tab(admin_tab_4, gui):
+    gui.cursor.execute("SELECT * FROM Shopping_list")
+    shopping_lists = gui.cursor.fetchall()
 
     order_history_frame = Frame(admin_tab_4)
     order_history_frame.grid(row=3, column=0, columnspan=4, padx=5, pady=5)
     if shopping_lists:
         for shopping_list in shopping_lists:
-            cursor.execute('''SELECT total_cost FROM Shopping_list WHERE Shopping_list_id = ? ''', (shopping_list[0],))
+            gui.cursor.execute('''SELECT total_cost FROM Shopping_list WHERE Shopping_list_id = ? ''', (shopping_list[0],))
             total_cost = cursor.fetchone()[0]
             if total_cost is not None:
                 btn = Button(order_history_frame,
@@ -458,7 +454,7 @@ def admin_order_history_tab(admin_tab_4):
                 btn.pack(side=TOP, padx=5, pady=5, fill="none", expand=False)
 
 
-def admin_add_product_tab(admin_tab_5):
+def admin_add_product_tab(admin_tab_5, gui, admin_manager):
     global id_input_product, product_name_input, product_base_price_input, product_supplier_input, product_quantity_input
 
     global product_id_input_2, product_quantity_input_2
@@ -508,7 +504,7 @@ def admin_add_product_tab(admin_tab_5):
 
     submit_product_info_label_2.grid(row=2, column=2, padx=10, pady=10, sticky="w")
 
-    admin_menu()
+    admin_menu(gui, admin_manager)
 
 
 def submit_product_info():
@@ -516,15 +512,15 @@ def submit_product_info():
         admin_add_product(id_input_product.get(), product_name_input.get(),
                           product_base_price_input.get(), product_supplier_input.get(),
                           product_quantity_input.get())
-    admin_menu()
+    admin_menu(gui, admin_manager)
 
 def submit_product_quantity_edit_info():
     if validate_product_quantity_edit():
         admin_edit_quantity_product(product_id_input_2.get().strip(), product_quantity_input_2.get().strip())
-    admin_menu()
+    admin_menu(gui, admin_manager)
 
 
-def admin_assign_discount(admin_tab_7):
+def admin_assign_discount(admin_tab_7, gui):
     global selected_product_id, selected_discount_id
 
     # creating the frame that shows discount and products
@@ -532,9 +528,9 @@ def admin_assign_discount(admin_tab_7):
     discount_frame.grid(row=2, column=0, columnspan=4, padx=10, pady=10)
 
     # this function automatically assign discount to matching product when tab is switched to
-    def assign_discounts_to_products():
+    def assign_discounts_to_products(gui):
 
-        cursor.execute('''SELECT product_code, discount_code FROM Discount''')
+        gui.cursor.execute('''SELECT product_code, discount_code FROM Discount''')
         discounts = cursor.fetchall()
         print(discounts)
         for product_code, discount_code in discounts:
@@ -542,11 +538,10 @@ def admin_assign_discount(admin_tab_7):
 
         conn.commit()
 
-    admin_tab_7.bind("<Visibility>", lambda event: assign_discounts_to_products())
-    assign_discounts_to_products()
+    admin_tab_7.bind("<Visibility>", lambda event: assign_discounts_to_products(gui))
 
-    def display_all_discounts():
-        cursor.execute('''SELECT * FROM Discount''')
+    def display_all_discounts(gui):
+        gui.cursor.execute('''SELECT * FROM Discount''')
         discounts = cursor.fetchall()
 
         # clearing the frame before adding new buttons
@@ -560,16 +555,16 @@ def admin_assign_discount(admin_tab_7):
                          command=lambda idx=discount[0]: select_discount(idx), width=80)
             btn.pack(side=TOP, padx=5, pady=5, fill="none", expand=False)
 
-    admin_tab_7.bind("<Visibility>", lambda event: display_all_discounts())
-    display_all_discounts()
+    admin_tab_7.bind("<Visibility>", lambda event: display_all_discounts(gui))
+
 
     # creating a frame for product buttons
     product_frame = Frame(admin_tab_7)
     product_frame.grid(row=3, column=0, columnspan=4, padx=10, pady=10)
 
-    def display_all_discounts_2():
-        cursor.execute('''SELECT * FROM Product''')
-        products = cursor.fetchall()
+    def display_all_discounts_2(gui):
+        gui.cursor.execute('''SELECT * FROM Product''')
+        products = gui.cursor.fetchall()
 
         # clearing the frame before adding new buttons
         for widget in product_frame.winfo_children():
@@ -580,7 +575,7 @@ def admin_assign_discount(admin_tab_7):
             discount_info = "None"
 
             if product[9] is not None:
-                cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (product[9],))
+                gui.cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (product[9],))
                 discount = cursor.fetchone()
                 if discount[4] < discount[3] < discount[5]:
                     discount_info = f"Discount ID: {discount[0]}  Discount ID: {discount[2]}  Product Price: {float(product[3])*((100-float(discount[1]))/100)}  Discount Percentage:  {discount[1]}%  From:  {discount[4]}  To:  {discount[5]}"
@@ -590,14 +585,24 @@ def admin_assign_discount(admin_tab_7):
                          command=lambda idx=product[0]: select_product(idx), width=160)
             btn.pack(side=TOP, padx=5, pady=5, fill="none", expand=False)
 
-    admin_tab_7.bind("<Visibility>", lambda event: display_all_discounts_2())
-    display_all_discounts_2()
+    admin_tab_7.bind("<Visibility>", lambda event: display_all_discounts_2(gui))
 
     assign_discount_button = Button(admin_tab_7, text="Assign Discount", command=assign_selected_discount_to_product)
     assign_discount_button.grid(row=4, column=0, columnspan=4, padx=10, pady=10)
 
     assign_discount_button = Button(admin_tab_7, text="Remove discount from product", command=remove_discount)
     assign_discount_button.grid(row=5, column=0, columnspan=4, padx=10, pady=10)
+
+
+def remove_discount():
+    cursor.execute("UPDATE Product SET Discount_ID = NULL WHERE product_code = ?", (selected_product_id,))
+
+
+def assign_selected_discount_to_product():
+    cursor.execute("UPDATE Product SET Discount_ID = ? WHERE product_code = ?", (selected_discount_id, selected_product_id))
+    messagebox.showinfo("Success", "Discount assigned to product!")
+
+    conn.commit()
 
 
 def admin_menu_tabs_init(gui, admin_manager):
