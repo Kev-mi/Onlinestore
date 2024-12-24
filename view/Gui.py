@@ -4,14 +4,16 @@ from tkinter import ttk, messagebox, simpledialog, filedialog, Button, Text, Scr
 
 class Gui:
     def __init__(self, cursor):
-        super().__init__()
         self.cursor = cursor
         self.root = tk.Tk()
         self.root.title("Online Store")
         self.root.attributes('-fullscreen', True)
 
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
+
         self.tabs = ttk.Notebook(self.root)
-        self.tabs.pack(fill=tk.BOTH, expand=True)
+        self.tabs.grid(row=0, column=0, sticky="nsew")
         self.tabs_list = []
 
         self.order_history_buttons = {}
@@ -26,6 +28,17 @@ class Gui:
         if tab in self.tabs_list:
             self.tabs.forget(tab)
             self.tabs_list.remove(tab)
+
+    def remove_tab_at_index(self, index):
+        if 0 <= index < len(self.tabs_list):
+            tab_to_remove = self.tabs_list[index]
+            self.tabs.forget(tab_to_remove)
+            self.tabs_list.pop(index)
+
+    def clear_tabs(self):
+        for tab in self.tabs_list:
+            self.tabs.forget(tab)
+        self.tabs_list.clear()
 
     #method that removes all tabs
     def remove_all_tabs(self):
