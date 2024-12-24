@@ -30,7 +30,8 @@ def customer_menu(gui, customer_manager):
     gui.tabs.bind("<<NotebookTabChanged>>", lambda event: customer_tab_change(gui, customer_manager))
 
 
-def customer_search_products_tab(gui,customer_tab_1, customer_manager):
+def customer_search_products_tab(gui, customer_tab_1, customer_manager):
+
     print("this works")
     # Input fields
     product_id_input = Entry(customer_tab_1, width=30)
@@ -59,8 +60,12 @@ def customer_search_products_tab(gui,customer_tab_1, customer_manager):
            ).grid(row=2, column=1, padx=10, pady=10, sticky="w")
 
     Button(customer_tab_1, text="Show Discount Items", width=20,
-           command=lambda: show_discounted_products(customer_manager, product_frame)
+           command=lambda: show_discounted_products(customer_manager, product_frame, gui)
            ).grid(row=2, column=2, padx=10, pady=10, sticky="w")
+
+    Button(customer_tab_1, text="Show All Items", width=20,
+           command=lambda: show_all_products(customer_manager, product_frame, gui)
+           ).grid(row=2, column=3, padx=10, pady=10, sticky="w")
 
     product_frame.grid(row=3, column=0, columnspan=4, padx=5, pady=5)
 
@@ -202,6 +207,15 @@ def submit_customer_login_info(gui, customer_manager):
         customer_menu(gui, customer_manager)
 
 
+def show_all_products(customer_manager, product_frame, gui):
+
+    for widget in product_frame.winfo_children():
+        widget.destroy()
+
+    products = customer_manager.get_all_products(gui)
+    for product in products:
+        add_product_to_frame(product_frame, product, gui, customer_manager)
+
 def display_all_products(customer_manager, product_frame, gui):
 
     for widget in product_frame.winfo_children():
@@ -209,7 +223,7 @@ def display_all_products(customer_manager, product_frame, gui):
 
     products = customer_manager.get_all_products(gui)
     for product in products:
-        add_product_to_frame(product_frame, product)
+        add_product_to_frame(product_frame, product, gui, customer_manager)
 
 
 def search_products(customer_manager, product_id, product_name, base_price, supplier_name, product_frame):
@@ -219,26 +233,34 @@ def search_products(customer_manager, product_id, product_name, base_price, supp
 
     products = customer_manager.search_products(product_id, product_name, base_price, supplier_name)
     for product in products:
-        add_product_to_frame(product_frame, product)
+        add_product_to_frame(product_frame, product, gui, customer_manager)
 
 
-def show_discounted_products(customer_manager, product_frame):
+def show_discounted_products(customer_manager, product_frame, gui):
 
     for widget in product_frame.winfo_children():
         widget.destroy()
 
-    discounted_products = customer_manager.get_discounted_products()
+    discounted_products = customer_manager.get_discounted_products(gui)
     for product, discount_rate in discounted_products:
-        add_product_to_frame(product_frame, product, discount_rate)
+        add_product_to_frame(product_frame, product, gui, customer_manager, discount_rate)
 
 
 # adds discount as clickable button
-def add_product_to_frame(product_frame, product, discount_rate=None):
+def add_product_to_frame(product_frame, product, gui , customer_manager, discount_rate=0):
     discount_text = f" (Discount: {discount_rate}%)" if discount_rate else ""
     btn_text = f"Product ID: {product[0]} | Name: {product[6]} | Price: {round(product[3] * (1 - (discount_rate or 0) / 100), 2)} | Quantity: {product[1]} | Supplier: {product[5]}{discount_text}"
 
     next_row = len(product_frame.grid_slaves())
-    Button(product_frame, text=btn_text, width=120).grid(row=next_row, column=0, padx=5, pady=5, sticky="w")
+
+    select_product_button = ttk.Button(
+        product_frame,
+        text=f"Product ID: {product[0]}  Product name: {product[6]} Product Price: {round(float(product[3]) * ((100 - float(discount_rate)) / 100), 2)}  Product quantity: {product[1]} Supplier: {product[5]}",
+        width=120,
+        command=lambda: customer_manager.select_product_customer(product[0], gui)
+    )
+    select_product_button.grid(row=next_row + 1, column=0, padx=5, pady=5, sticky="w")
+
 
 
 def customer_main_menu(customer_tab_3, gui, customer_manager):
