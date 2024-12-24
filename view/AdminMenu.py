@@ -45,7 +45,7 @@ def admin_menu(gui, admin_manager):
             2: lambda: admin_add_supplier_tab(gui.tabs.nametowidget(gui.tabs.select())),
             3: lambda: admin_order_history_tab(gui.tabs.nametowidget(gui.tabs.select()), gui),
             4: lambda: admin_add_product_tab(gui.tabs.nametowidget(gui.tabs.select()), gui, admin_manager),
-            5: lambda: admin_add_discount_tab(gui.tabs.nametowidget(gui.tabs.select())),
+            5: lambda: admin_add_discount_tab(gui.tabs.nametowidget(gui.tabs.select(), gui)),
             6: lambda: admin_assign_discount(gui.tabs.nametowidget(gui.tabs.select()), gui),
             7: lambda: admin_main_menu(gui.tabs.nametowidget(gui.tabs.select()), gui),
         }
@@ -96,43 +96,46 @@ def admin_search_products_tab(admin_tab_2, admin_manager, gui):
     product_supplier_search_input.grid(row=1, column=3, padx=0, pady=5)
 
     submit_search_box_input_label = Button(admin_tab_2, text="Search for product", width=20,
-                                   command=lambda: submit_search_info())
+                                   command=lambda: search_info_setter(gui, admin_manager,
+                                                                      product_id_search_input.get().strip(),
+                                                                      product_name_search_input.get().strip(),
+                                                                      product_base_search_price_input.get().strip(),
+                                                                      product_supplier_search_input.get().strip()))
 
     submit_search_box_input_label.grid(row=2, column=1, padx=0, pady=5, sticky="w")
 
-    #adjust height and width in the result box
+    gui.cursor.execute('''SELECT * FROM Product''')
+    products = gui.cursor.fetchall()
+    print("here's the products")
+
+    # adjust height and width in the result box
     result_text = Text(admin_tab_2, width=137, height=40)
     result_text.grid(row=3, column=0, columnspan=4, padx=0, pady=5)
 
     # to format it correctly i choose the different lengths
     # product id is 10 because len(product ID) == 10, same logic applies to why "product quantity" is 16
     # so result text grid is (10 + 16 + 25 + 10 + 30 - 1) == 100
-    result_text.insert('end', f"{'Product ID':<10} | {'Product quantity':<16} | {'Product Name':<25}| {'Base Price':<10}| {'Supplier':<25}| {'number of sales':<15} | {'From':<10} | {'To':<10}\n")
+    result_text.insert('end',
+                       f"{'Product ID':<10} | {'Product quantity':<16} | {'Product Name':<25}| {'Base Price':<10}| {'Supplier':<25}| {'number of sales':<15} | {'From':<10} | {'To':<10}\n")
     # this is to add dotted lines below
     result_text.insert('end', '-' * 137 + '\n')
 
-    def display_all_products(gui):
-        gui.cursor.execute('''SELECT * FROM Product''')
-        products = gui.cursor.fetchall()
-
-        result_text.delete('3.0', 'end')
-        # inserting the product info inputted
-        for product in products:
-
-            if product[9] is not None:
-                gui.cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (product[9],))
-                discount = cursor.fetchone()
-                result_text.insert('end',
-                                   f"{product[0]:<10} | {product[1]:<16} | {product[6]:<25}| {product[3]:<10}| {product[5]:<25}| {product[2]:<15}| {discount[4]}| {discount[5]}\n")
-                result_text.insert('end', '-' * 137 + '\n')
-            else:
-                result_text.insert('end',
-                                   f"{product[0]:<10} | {product[1]:<16} | {product[6]:<25}| {product[3]:<10}| {product[5]:<25}| {product[2]:<15}\n")
-                result_text.insert('end', '-' * 137 + '\n')
-
-    # function that displays products when the tab is clicked on
-    admin_tab_2.bind("<Visibility>", lambda event: display_all_products(gui))
-
+    # inserting the product info inputted
+    for product in products:
+        # checking if the product has a discount added to it
+        print(product[9])
+        if product[9] is not None:
+            gui.cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (product[9],))
+            discount = gui.cursor.fetchone()
+            result_text.insert('end',
+                               f"{product[0]:<10} | {product[1]:<16} | {product[6]:<25}| {product[3]:<10}| {product[5]:<25}| {product[2]:<15}| {discount[4]}| {discount[5]}\n")
+            result_text.insert('end', '-' * 137 + '\n')
+        else:
+            print(product[9])
+            print(product)
+            result_text.insert('end',
+                               f"{product[0]:<10} | {product[1]:<16} | {product[6]:<25}| {product[3]:<10}| {product[5]:<25}| {product[2]:<15}\n")
+            result_text.insert('end', '-' * 137 + '\n')
 
 
     admin_tab_2.grid_columnconfigure(4, weight=0)
@@ -181,11 +184,11 @@ def admin_search_products_tab(admin_tab_2, admin_manager, gui):
                 result_text_search.insert('end', '-' * 137 + '\n')
 
 
-    def admin_product_search():
-        product_id = product_id_search_input.get().strip()
-        product_name = product_name_search_input.get().strip()
-        product_base_price = product_base_search_price_input.get().strip()
-        product_supplier = product_supplier_search_input.get().strip()
+    def admin_product_search(gui, admin_manager):
+        product_id = admin_manager.get_product_id_search_input()
+        product_name = admin_manager.get_product_name_search_input()
+        product_base_price = admin_manager.get_product_base_price_search_input()
+        product_supplier = admin_manager.get_product_supplier_search_input()
 
         conditions = []
         values = []
@@ -212,16 +215,25 @@ def admin_search_products_tab(admin_tab_2, admin_manager, gui):
         if where_clause:
             query += " WHERE " + where_clause
 
-        cursor.execute(query, tuple(values))
+        gui.cursor.execute(query, tuple(values))
 
-        searched_products = cursor.fetchall()
+        searched_products = gui.cursor.fetchall()
 
         display_search_results(searched_products)
 
-    def submit_search_info():
-        if validate_search_info():
+    def search_info_setter(gui, admin_manager, product_id, product_name, base_price, product_supplier):
+
+        admin_manager.set_product_id_search_input(product_id)
+        admin_manager.set_product_name_search_input(product_name)
+        admin_manager.set_product_base_price_search_input(base_price)
+        admin_manager.set_product_supplier_search_input(product_supplier)
+
+        submit_search_info(gui, admin_manager)
+
+    def submit_search_info(gui, admin_manager):
+        if admin_manager.validate_search_info():
             result_text.grid_forget()
-            admin_product_search()
+            admin_product_search(gui, admin_manager)
 
 
 def admin_main_menu(admin_tab_8, gui):
@@ -232,7 +244,7 @@ def admin_main_menu(admin_tab_8, gui):
 
 
 
-def admin_add_discount_tab(admin_tab_6):
+def admin_add_discount_tab(admin_tab_6, gui):
 
     id_discount_label = Label(admin_tab_6, text="Discount ID:")
     id_discount_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
@@ -265,7 +277,7 @@ def admin_add_discount_tab(admin_tab_6):
     product_code_input.grid(row=3, column=1, padx=10, pady=10)
 
     submit_discount_label = Button(admin_tab_6, text="Submit discount", width=40,
-                                        command=lambda: submit_discount_info())
+                                        command=lambda: submit_discount_info(gui))
 
     submit_discount_label.grid(row=6, column=1, padx=10, pady=10, sticky="w")
 
@@ -280,9 +292,9 @@ def admin_add_discount_tab(admin_tab_6):
     submit_discount_to_remove_label.grid(row=1, column=5, padx=10, pady=10, sticky="w")
 
 
-def submit_discount_info():
+def submit_discount_info(gui):
     if validate_discount_add():
-        admin_add_discount()
+        admin_add_discount(gui)
 
 
 def validate_discount_add():
@@ -396,7 +408,7 @@ def admin_add_supplier_tab(admin_tab_3):
     submit_supplier_info_label.grid(row=6, column=1, padx=10, pady=10, sticky="w")
 
 
-def admin_add_discount():
+def admin_add_discount(gui):
     id_discount = id_discount_input.get()
     name_discount = name_discount_input.get()
     discount_percentage = discount_input.get()
@@ -418,13 +430,13 @@ def admin_add_discount():
                     WHERE product_code = ?
                 ''', (id_discount, product_id_discount))
 
-            conn.commit()
+            gui.conn.commit()
 
             messagebox.showinfo("Success", "Discount added!")
 
-            conn.commit()
+            gui.conn.commit()
         else:
-            cursor.execute('''
+            gui.cursor.execute('''
                           INSERT INTO Discount (discount_code, discount_category, discount_percentage, start_date, end_date)
                           VALUES (?, ?, ?, ?, ?)
                       ''', (
@@ -432,7 +444,7 @@ def admin_add_discount():
 
             messagebox.showinfo("Success", "Discount added!")
 
-            conn.commit()
+            gui.conn.commit()
 
         id_discount_input.delete(0, END)
         name_discount_input.delete(0, END)
@@ -491,7 +503,12 @@ def admin_add_product_tab(admin_tab_5, gui, admin_manager):
     product_quantity_input.grid(row=4, column=1, padx=10, pady=10)
 
     submit_product_info_label = Button(admin_tab_5, text="Add new product", width=40,
-                                       command=lambda: submit_product_info())
+                                       command=lambda: submit_product_info_setter(gui, admin_manager,
+                                                                           id_input_product.get(),
+                                                                           product_name_input.get(),
+                                                                           product_base_price_input.get(),
+                                                                           product_supplier_input.get(),
+                                                                           product_quantity_input.get()))
 
     submit_product_info_label.grid(row=6, column=1, padx=10, pady=10, sticky="w")
 
@@ -506,23 +523,48 @@ def admin_add_product_tab(admin_tab_5, gui, admin_manager):
     product_quantity_input_2.grid(row=1, column=3, padx=10, pady=10)
 
     submit_product_info_label_2 = Button(admin_tab_5, text="Increase quantity of product", width=40,
-                                       command=lambda: submit_product_quantity_edit_info())
+                                       command=lambda: submit_product_quantity_edit_info_setter(gui, admin_manager,
+                                                                                                product_id_input_2.get().strip(),
+                                                                                                product_quantity_input_2.get().strip()))
 
     submit_product_info_label_2.grid(row=2, column=2, padx=10, pady=10, sticky="w")
 
     admin_menu(gui, admin_manager)
 
 
-def submit_product_info():
-    if validate_inputs_product():
-        admin_add_product(id_input_product.get(), product_name_input.get(),
-                          product_base_price_input.get(), product_supplier_input.get(),
-                          product_quantity_input.get())
+def submit_product_info_setter(gui, admin_manager,
+                               id_input_product,
+                               product_name_input,
+                               product_base_price_input,
+                               product_supplier_input,
+                               product_quantity_input):
+
+    admin_manager.set_id_input_product(id_input_product)
+    admin_manager.set_product_name_input(product_name_input)
+    admin_manager.set_product_base_price_input(product_base_price_input)
+    admin_manager.set_product_supplier_input(product_supplier_input)
+    admin_manager.set_product_quantity_input(product_quantity_input)
+
+    submit_product_info(gui, admin_manager)
+
+
+def submit_product_info(gui, admin_manager):
+    if admin_manager.validate_inputs_product():
+        admin_manager.admin_add_product(gui)
+
     admin_menu(gui, admin_manager)
 
-def submit_product_quantity_edit_info():
-    if validate_product_quantity_edit():
-        admin_edit_quantity_product(product_id_input_2.get().strip(), product_quantity_input_2.get().strip())
+
+def submit_product_quantity_edit_info_setter(gui, admin_manager, product_id, product_quantity):
+    admin_manager.set_product_quantity_input_2(product_id)
+    admin_manager.set_product_id_input_2(product_quantity)
+
+    submit_product_quantity_edit_info(gui, admin_manager)
+
+
+def submit_product_quantity_edit_info(gui, admin_manager):
+    if admin_manager.validate_product_quantity_edit(gui):
+        admin_manager.admin_edit_quantity_product(gui)
     admin_menu(gui, admin_manager)
 
 
