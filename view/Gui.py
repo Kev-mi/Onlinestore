@@ -3,8 +3,9 @@ from tkinter import ttk, messagebox, simpledialog, filedialog, Button, Text, Scr
 
 
 class Gui:
-    def __init__(self, cursor):
-        self.cursor = cursor
+    def __init__(self, conn):
+        self.conn = conn
+        self.cursor = conn.cursor()
         self.root = tk.Tk()
         self.root.title("Online Store")
         self.root.attributes('-fullscreen', True)
