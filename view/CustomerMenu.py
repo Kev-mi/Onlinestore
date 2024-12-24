@@ -2,9 +2,9 @@ from tkinter import ttk, messagebox, simpledialog, filedialog, Button, Text, Scr
 import view.MainMenu as MainMenu
 import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from controller.Controller import go_to_main_menu
+from model.MenuSwitcher import go_to_main_menu
 import tkinter as tk
-
+from tkinter import StringVar
 
 def customer_menu(gui, customer_manager):
 
@@ -13,10 +13,10 @@ def customer_menu(gui, customer_manager):
         print(f"selected customer index is: {current_tab_index}")
         switch_case = {
             0: lambda: customer_search_products_tab(gui.tabs.nametowidget(gui.tabs.select()), customer_manager),
-            1: lambda: customer_sign_up(gui.tabs.nametowidget(gui.tabs.select()), customer_manager),
+            1: lambda: customer_sign_up(gui,gui.tabs.nametowidget(gui.tabs.select()), customer_manager),
             2: lambda: customer_main_menu(gui.tabs.nametowidget(gui.tabs.select()), gui, customer_manager),
             3: lambda: customer_login(gui.tabs.nametowidget(gui.tabs.select()), gui, customer_manager),
-            4: lambda: customer_logout_menu(gui.tabs.nametowidget(gui.tabs.select())),
+            4: lambda: customer_logout_menu(gui.tabs.nametowidget(gui.tabs.select()),customer_manager),
             5: lambda: customer_current_order_tab(gui.tabs.nametowidget(gui.tabs.select()), gui, customer_manager),
             6: lambda: customer_order_history_tab(gui, customer_manager),
         }
@@ -69,50 +69,111 @@ def customer_search_products_tab(customer_tab_1, customer_manager):
 
 
 # form for customer sign up
-def customer_sign_up(customer_tab_2, customer_manager):
+def customer_sign_up(gui,customer_tab_2, customer_manager):
+    customer_username_label = ttk.Label(customer_tab_2, text="Username:")
+    customer_username_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
 
-    ttk.Label(customer_tab_2, text="Username:").grid(row=0, column=0, padx=10, pady=10, sticky="w")
-    customer_manager.username_input = ttk.Entry(customer_tab_2, width=30)
-    customer_manager.username_input.grid(row=0, column=1, padx=10, pady=10)
+    customer_username_input = ttk.Entry(customer_tab_2, width=30)
+    customer_username_input.grid(row=0, column=1, padx=10, pady=10)
 
-    ttk.Label(customer_tab_2, text="Password:").grid(row=1, column=0, padx=10, pady=10, sticky="w")
-    customer_manager.password_input = ttk.Entry(customer_tab_2, width=30)
-    customer_manager.password_input.grid(row=1, column=1, padx=10, pady=10)
+    customer_password_label = ttk.Label(customer_tab_2, text="Password:")
+    customer_password_label.grid(row=1, column=0, padx=10, pady=10, sticky="w")
 
-    ttk.Label(customer_tab_2, text="First Name:").grid(row=2, column=0, padx=10, pady=10, sticky="w")
-    customer_manager.first_name_input = ttk.Entry(customer_tab_2, width=30)
-    customer_manager.first_name_input.grid(row=2, column=1, padx=10, pady=10)
+    customer_password_input = ttk.Entry(customer_tab_2, width=30)
+    customer_password_input.grid(row=1, column=1, padx=10, pady=10)
 
-    ttk.Label(customer_tab_2, text="Last Name:").grid(row=3, column=0, padx=10, pady=10, sticky="w")
-    customer_manager.last_name_input = ttk.Entry(customer_tab_2, width=30)
-    customer_manager.last_name_input.grid(row=3, column=1, padx=10, pady=10)
+    customer_first_name_label = ttk.Label(customer_tab_2, text="First Name:")
+    customer_first_name_label.grid(row=2, column=0, padx=10, pady=10, sticky="w")
 
-    ttk.Label(customer_tab_2, text="Email:").grid(row=4, column=0, padx=10, pady=10, sticky="w")
-    customer_manager.email_input = ttk.Entry(customer_tab_2, width=30)
-    customer_manager.email_input.grid(row=4, column=1, padx=10, pady=10)
+    customer_first_name_input = ttk.Entry(customer_tab_2, width=30)
+    customer_first_name_input.grid(row=2, column=1, padx=10, pady=10)
 
-    ttk.Label(customer_tab_2, text="Address:").grid(row=5, column=0, padx=10, pady=10, sticky="w")
-    customer_manager.address_input = ttk.Entry(customer_tab_2, width=30)
-    customer_manager.address_input.grid(row=5, column=1, padx=10, pady=10)
+    customer_last_name_label = ttk.Label(customer_tab_2, text="Last Name:")
+    customer_last_name_label.grid(row=3, column=0, padx=10, pady=10, sticky="w")
 
-    ttk.Label(customer_tab_2, text="City:").grid(row=6, column=0, padx=10, pady=10, sticky="w")
-    customer_manager.city_input = ttk.Entry(customer_tab_2, width=30)
-    customer_manager.city_input.grid(row=6, column=1, padx=10, pady=10)
+    customer_last_name_input = ttk.Entry(customer_tab_2, width=30)
+    customer_last_name_input.grid(row=3, column=1, padx=10, pady=10)
 
-    ttk.Label(customer_tab_2, text="Country:").grid(row=7, column=0, padx=10, pady=10, sticky="w")
-    customer_manager.country_input = ttk.Entry(customer_tab_2, width=30)
-    customer_manager.country_input.grid(row=7, column=1, padx=10, pady=10)
+    customer_email_label = ttk.Label(customer_tab_2, text="Email:")
+    customer_email_label.grid(row=4, column=0, padx=10, pady=10, sticky="w")
 
-    ttk.Label(customer_tab_2, text="Phone number:").grid(row=8, column=0, padx=10, pady=10, sticky="w")
-    customer_manager.phone_number_input = ttk.Entry(customer_tab_2, width=30)
-    customer_manager.phone_number_input.grid(row=8, column=1, padx=10, pady=10)
+    customer_email_input = ttk.Entry(customer_tab_2, width=30)
+    customer_email_input.grid(row=4, column=1, padx=10, pady=10)
+
+    customer_address_label = ttk.Label(customer_tab_2, text="Address:")
+    customer_address_label.grid(row=5, column=0, padx=10, pady=10, sticky="w")
+
+    customer_address_input = ttk.Entry(customer_tab_2, width=30)
+    customer_address_input.grid(row=5, column=1, padx=10, pady=10)
+
+    customer_city_label = ttk.Label(customer_tab_2, text="City:")
+    customer_city_label.grid(row=6, column=0, padx=10, pady=10, sticky="w")
+
+    customer_city_input = ttk.Entry(customer_tab_2, width=30)
+    customer_city_input.grid(row=6, column=1, padx=10, pady=10)
+
+    customer_country_label = ttk.Label(customer_tab_2, text="Country:")
+    customer_country_label.grid(row=7, column=0, padx=10, pady=10, sticky="w")
+
+    customer_country_input = ttk.Entry(customer_tab_2, width=30)
+    customer_country_input.grid(row=7, column=1, padx=10, pady=10)
+
+    customer_phone_number_label = ttk.Label(customer_tab_2, text="Phone number:")
+    customer_phone_number_label.grid(row=8, column=0, padx=10, pady=10, sticky="w")
+
+    customer_phone_number_input = ttk.Entry(customer_tab_2, width=30)
+    customer_phone_number_input.grid(row=8, column=1, padx=10, pady=10)
 
     ttk.Button(
         customer_tab_2,
         text="Sign Up",
         width=40,
-        command=lambda: submit_customer_sign_up_info(customer_manager)
+        command=lambda: customer_sign_up_setter(gui,customer_manager,
+                                                customer_username_input.get().strip(),
+                                                customer_password_input.get().strip(),
+                                                customer_first_name_input.get().strip(),
+                                                customer_last_name_input.get().strip(),
+                                                customer_email_input.get().strip(),
+                                                customer_address_input.get().strip(),
+                                                customer_city_input.get().strip(),
+                                                customer_country_input.get().strip(),
+                                                customer_phone_number_input.get().strip()
+                                                )
     ).grid(row=9, column=1, padx=10, pady=10, sticky="w")
+
+
+def customer_sign_up_setter(gui,customer_manager,
+                            customer_username_input,
+                            customer_password_input,
+                            customer_first_name_input,
+                            customer_last_name_input,
+                            customer_email_input,
+                            customer_address_input,
+                            customer_city_input,
+                            customer_country_input,
+                            customer_phone_number_input):
+
+    customer_manager.set_customer_username(customer_username_input)
+
+    customer_manager.set_customer_password(customer_password_input)
+
+    customer_manager.set_customer_first_name(customer_first_name_input)
+
+    customer_manager.set_customer_last_name(customer_last_name_input)
+
+    customer_manager.set_customer_email(customer_email_input)
+
+    customer_manager.set_customer_address(customer_address_input)
+
+    customer_manager.set_customer_city(customer_city_input)
+
+    customer_manager.set_customer_country(customer_country_input)
+
+    customer_manager.set_customer_phone_number(customer_phone_number_input)
+
+
+    submit_customer_sign_up_info(gui, customer_manager)
+
 
 
 def display_all_products(customer_manager, product_frame):
@@ -182,10 +243,10 @@ def customer_login(customer_tab_4, gui, customer_manager):
     customer_menu(gui, customer_manager)
 
 
-def submit_customer_login_info():
+def submit_customer_login_info(gui, customer_manager):
     if validate_customer_login():
         customer_login_fucntion()
-        customer_menu()
+        customer_menu(gui, customer_manager)
 
 
 def customer_go_to_main_menu(gui, customer_manager):
@@ -194,39 +255,43 @@ def customer_go_to_main_menu(gui, customer_manager):
     customer_manager.set_current_user_name("")
     customer_manager.set_customer_logged_in(False)
 
+    unbind_customer_menu_events(gui)
+
     #this is also to remove the window so windows doesn't keep adding up
     go_to_main_menu(
         gui,
         gui.switch_to_customer_menu,
         gui.switch_to_admin_menu,
-        customer_manager
     )
 
 
-def submit_customer_sign_up_info(customer_manager):
-    if customer_manager.validate_user_sign_up():
-        customer_manager.create_customer()
-        customer_menu()
+def submit_customer_sign_up_info(gui, customer_manager):
+    if customer_manager.validate_user_sign_up(gui):
+        customer_manager.create_customer(gui)
+        customer_menu(gui, customer_manager)
 
 
-def customer_logout_menu(customer_tab_5):
+def unbind_customer_menu_events(gui):
+    gui.tabs.unbind("<<NotebookTabChanged>>")
+
+def customer_logout_menu(customer_tab_5, customer_manager):
 
     customer_logout_button = ttk.Button(customer_tab_5, text="logout", width=40,
-                                       command=lambda: customer_logout_function())
+                                       command=lambda: customer_logout_function(customer_manager))
 
     customer_logout_button.grid(row=0, column=1, padx=10, pady=10, sticky="w")
 
 
-def customer_logout_function():
-    global customer_logged_in
-    global current_user_name
-    if customer_logged_in == True:
-        customer_logged_in = False
-        current_user_name = ""
+def customer_logout_function(customer_manager):
+
+    if customer_manager.get_customer_logged_in() == True:
+        customer_manager.set_customer_logged_in(False)
+        customer_manager.set_current_user_name("")
     else:
         messagebox.showerror("Error", "Customer is not logged in")
 
-    customer_menu()
+
+    customer_menu(gui, customer_manager)
 
 
 def customer_current_order_tab(customer_tab_6, gui, customer_manager):
