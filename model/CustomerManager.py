@@ -1,9 +1,9 @@
 import view.CustomerMenu as CustomerMenu
+from tkinter import ttk, messagebox, simpledialog, filedialog, Button, Text, Scrollbar, Frame, TOP, END, VERTICAL, Entry, Label
 
 class CustomerManager:
 
-    def __init__(self, cursor):
-        self.cursor = cursor
+    def __init__(self):
 
         self.username_input = None
         self.password_input = None
@@ -21,39 +21,14 @@ class CustomerManager:
         self.customer_logged_in = None
         self.current_user_name = None
 
-    # method for creating a customer
-    def create_customer(self):
-
-        username = self.username_input.get().strip()
-        password = self.password_input.get().strip()
-        first_name = self.first_name_input.get().strip()
-        last_name = self.last_name_input.get().strip()
-        email = self.email_input.get().strip()
-        address = self.address_input.get().strip()
-        city = self.city_input.get().strip()
-        country = self.country_input.get().strip()
-        phone_number = self.phone_number_input.get().strip()
-
-        # checking if the username and password fields have been filled
-        if not username or not password:
-            raise ValueError("Username and password are required.")
-
-        self.cursor.execute(
-            """
-            INSERT INTO Customer (username, password, first_name, last_name, email, address, city, country, phone_number)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (username, password, first_name, last_name, email, address, city, country, phone_number),
-        )
-
     # method that gets all inserted products
-    def get_all_products(self):
+    def get_all_products(self,gui):
 
-        self.cursor.execute("SELECT * FROM Product")
-        return self.cursor.fetchall()
+        gui.cursor.execute("SELECT * FROM Product")
+        return gui.cursor.fetchall()
 
     # method that returns all the products
-    def search_products(self, product_id=None, product_name=None, base_price=None, supplier_name=None):
+    def search_products(self, gui, product_id=None, product_name=None, base_price=None, supplier_name=None):
 
         conditions = []
         values = []
@@ -75,13 +50,17 @@ class CustomerManager:
         if conditions:
             query += " WHERE " + " AND ".join(conditions)
 
-        self.cursor.execute(query, tuple(values))
-        return self.cursor.fetchall()
+        gui.cursor.execute(query, tuple(values))
+        return gui.cursor.fetchall()
 
-
+    # set and get methods for customer_logged_in
     def set_customer_logged_in(self, logged_in_status):
         self.customer_logged_in = logged_in_status
 
+    def get_customer_logged_in(self):
+        return self.customer_logged_in
+
+    # set and get methods for current_user_name
     def set_current_user_name(self, current_user_name):
         self.current_user_name = current_user_name
 
@@ -89,43 +68,100 @@ class CustomerManager:
         return self.current_user_name
     # method that gets all discounted products
 
+    def set_customer_username(self, username):
+        print("here's username in set method")
+        print(username)
+        self.username_input = username
 
-    def get_discounted_products(self):
+    def get_customer_username(self):
+        return self.username_input
 
-        self.cursor.execute("SELECT * FROM Product")
-        products = self.cursor.fetchall()
+    def set_customer_password(self, password):
+        print("here's password in set method ")
+        print(password)
+        self.password_input = password
+
+    def get_customer_password(self):
+        return self.password_input
+
+    def set_customer_first_name(self, first_name):
+        self.first_name_input = first_name
+
+    def get_customer_first_name(self):
+        return self.first_name_input
+
+    def set_customer_last_name(self, last_name):
+        self.last_name_input = last_name
+
+    def get_customer_last_name(self):
+        return self.last_name_input
+
+    def set_customer_email(self, email):
+        self.email_input = email
+
+    def get_customer_email(self):
+        return self.email_input
+
+    def set_customer_address(self, address):
+        self.address_input = address
+
+    def get_customer_address(self):
+        return self.address_input
+
+    def set_customer_city(self, city):
+        self.city_input = city
+
+    def get_customer_city(self):
+        return self.city_input
+
+    def set_customer_country(self, country):
+        self.country_input = country
+
+    def get_customer_country(self):
+        return self.country_input
+
+    def set_customer_phone_number(self, phone_number):
+        self.phone_number_input = phone_number
+
+    def get_customer_phone_number(self):
+        return self.phone_number
+
+    def get_discounted_products(self, gui):
+
+        gui.cursor.execute("SELECT * FROM Product")
+        products = gui.cursor.fetchall()
 
         discounted_products = []
         for product in products:
-            self.cursor.execute("SELECT * FROM Discount WHERE discount_code = ?", (product[9],))
-            discount = self.cursor.fetchone()
+            gui.cursor.execute("SELECT * FROM Discount WHERE discount_code = ?", (product[9],))
+            discount = gui.cursor.fetchone()
             if discount and discount[4] < discount[3] < discount[5]:
                 discounted_products.append((product, discount[1]))
 
         return discounted_products
 
-    def create_customer(self):
+    def create_customer(self, gui):
 
-        customer_username = customer_username_input.get().strip()
-        customer_password = customer_password_input.get().strip()
-        first_name = customer_first_name_input.get().strip()
-        last_name = customer_last_name_input.get().strip()
-        email = customer_email_input.get().strip()
-        address = customer_address_input.get().strip()
-        city = customer_city_input.get().strip()
-        country = customer_country_input.get().strip()
-        phone_number = customer_phone_number_input.get().strip()
+        customer_username = self.username_input
+        customer_password = self.password_input
+        first_name = self.first_name_input
+        last_name = self.last_name_input
+        email = self.email_input
+        address = self.address_input
+        city = self.city_input
+        country = self.country_input
+        phone_number = self.phone_number_input
 
         try:
             # insertng customer with that name and password
-            cursor.execute('''
+            gui.cursor.execute('''
                 INSERT INTO User (username, password, user_type)
                 VALUES (?, ?, ?)
             ''', (customer_username, customer_password, "customer"))
 
-            user_id = cursor.lastrowid
+            user_id = gui.cursor.lastrowid
 
-            cursor.execute('''
+            gui.cursor.execute('''
                     INSERT INTO Customer_info (first_name, last_name, email, address, city, country, phone_number,user_id)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (first_name, last_name, email, address, city, country, phone_number, user_id))
@@ -137,17 +173,17 @@ class CustomerManager:
             messagebox.showerror("Error", f" couldn't create customer reason: {str(e)}")
 
 
-    def validate_user_sign_up(self):
+    def validate_user_sign_up(self, gui):
 
-        customer_username = customer_username_input.get().strip()
-        customer_password = customer_password_input.get().strip()
-        first_name = customer_first_name_input.get().strip()
-        last_name = customer_last_name_input.get().strip()
-        email = customer_email_input.get().strip()
-        address = customer_address_input.get().strip()
-        city = customer_city_input.get().strip()
-        country = customer_country_input.get().strip()
-        phone_number = customer_phone_number_input.get().strip()
+        customer_username = self.username_input
+        customer_password = self.password_input
+        first_name = self.first_name_input
+        last_name = self.last_name_input
+        email = self.email_input
+        address = self.address_input
+        city = self.city_input
+        country = self.country_input
+        phone_number = self.phone_number_input
 
         if not all([customer_username, customer_password, first_name, last_name, email, address, city, country,
                     phone_number]):
@@ -162,8 +198,8 @@ class CustomerManager:
             messagebox.showerror("Error", "Password cannot be longer than 30 characters")
             return False
 
-        cursor.execute("SELECT COUNT(*) FROM User WHERE username = ?", (customer_username,))
-        count = cursor.fetchone()[0]
+        gui.cursor.execute("SELECT COUNT(*) FROM User WHERE username = ?", (customer_username,))
+        count = gui.cursor.fetchone()[0]
         if count > 0:
             messagebox.showerror("Error", "User with that username already exists")
             return False
@@ -203,7 +239,11 @@ class CustomerManager:
         return True
 
     def customer_login_fucntion(self):
-        customer_logged_in = True
-        current_user_name = customer_username_login_input.get().strip()
-        customer_username_login_input = ""
+        self.customer_logged_in = True
+        self.current_user_name = customer_username_login_input.get().strip()
+        self.customer_username_login_input = ""
         messagebox.showinfo("Success", "Customer got logged in")
+
+    def set_customer_login(self, login_status):
+        self.customer_logged_in = login_status
+
