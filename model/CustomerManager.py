@@ -290,3 +290,90 @@ class CustomerManager:
     def set_customer_login(self, login_status):
         self.customer_logged_in = login_status
 
+    def select_product_customer(self, product_id, gui):
+        print("it's in select product customer")
+        if not self.customer_logged_in:
+            messagebox.showerror("Error", "You need to be logged in to add to order!")
+            return None
+
+        gui.cursor.execute('SELECT * FROM Product WHERE product_code = ?', (product_id,))
+        product = gui.cursor.fetchone()
+
+        if not product:
+            messagebox.showerror("Error", "Product not found!")
+            return None
+
+        quantity_in_stock = product[1]
+        user_input = simpledialog.askinteger("Quantity", "Select quantity of product you want to order")
+        if user_input is None:
+            messagebox.showinfo("Cancelled", "No quantity selected.")
+            return None
+
+        try:
+            quantity_ordered = int(user_input)
+            if quantity_ordered <= 0:
+                raise ValueError("Quantity must be positive")
+        except ValueError:
+            messagebox.showerror("Invalid input", "Please enter a valid quantity.")
+            return None
+
+        if quantity_ordered > quantity_in_stock:
+            messagebox.showerror("Error", "Not enough stock available!")
+            return None
+
+        gui.cursor.execute('''
+            SELECT Shopping_list_id 
+            FROM Shopping_list 
+            WHERE username = ? AND confirmed_order = FALSE AND placed_order = FALSE
+            ORDER BY Shopping_list_id DESC
+            LIMIT 1
+        ''', (current_user_name,))
+        active_shopping_list = cursor.fetchone()
+
+        if active_shopping_list is None:
+            gui.cursor.execute("SELECT MAX(Shopping_list_id) FROM Shopping_list")
+            max_shopping_list_id = cursor.fetchone()[0] or 0
+            shopping_list_id = max_shopping_list_id + 1
+
+            gui.cursor.execute('''
+                INSERT INTO Shopping_list (Shopping_list_id, username, total_cost, confirmed_order, placed_order)
+                VALUES (?, ?, 0, FALSE, FALSE)
+            ''', (shopping_list_id, current_user_name))
+        else:
+            shopping_list_id = active_shopping_list[0]
+
+        discount_id = product[9]
+
+        gui.cursor.execute(
+            '''SELECT quantity FROM Shopping_list_item 
+               WHERE product_code = ? AND Shopping_list_id = ? AND username = ? AND ordered = FALSE''',
+            (product_id, shopping_list_id, current_user_name)
+        )
+        current_product_quantity = cursor.fetchone()
+
+        if current_product_quantity:
+            new_quantity = current_product_quantity[0] + quantity_ordered
+            gui.cursor.execute(
+                '''UPDATE Shopping_list_item 
+                   SET quantity = ? 
+                   WHERE product_code = ? AND Shopping_list_id = ? AND username = ? AND ordered = FALSE''',
+                (new_quantity, product_id, shopping_list_id, current_user_name)
+            )
+        else:
+            gui.cursor.execute(
+                '''INSERT INTO Shopping_list_item (Shopping_list_id, product_code, quantity, username, Discount_ID, ordered) 
+                   VALUES (?, ?, ?, ?, ?, FALSE)''',
+                (shopping_list_id, product_id, quantity_ordered, current_user_name, discount_id)
+            )
+
+        gui.cursor.execute(
+            '''UPDATE Product 
+               SET quantity_in_stock = ? 
+               WHERE product_code = ?''',
+            (quantity_in_stock - quantity_ordered, product_id)
+        )
+
+        gui.conn.commit()
+
+        customer_menu()
+
