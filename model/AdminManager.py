@@ -127,6 +127,42 @@ class AdminManager:
     def set_product_quantity_input_2(self, product_quantity_input_2):
         self.product_quantity_input_2 = product_quantity_input_2
 
+    def set_name_input(self, name_input):
+        self.name_input = name_input
+
+    def get_name_input(self):
+        return self.name_input
+
+    def set_street_input(self, street_input):
+        self.street_input = street_input
+
+    def get_street_input(self):
+        return self.street_input
+
+    def set_zip_code_input(self, zip_code_input):
+        self.zip_code_input = zip_code_input
+
+    def get_zip_code_input(self):
+        return self.zip_code_input
+
+    def set_city_input(self, city_input):
+        self.city_input = city_input
+
+    def get_city_input(self):
+        return self.city_input
+
+    def set_country_input(self, country_input):
+        self.country_input = country_input
+
+    def get_country_input(self):
+        return self.country_input
+
+    def set_phone_number_input(self, phone_number_input):
+        self.phone_number_input = phone_number_input
+
+    def get_phone_number_input(self):
+        return self.phone_number_input
+
     def validate_search_info(self):
         product_id = self.product_id_search_input
         product_name = self.product_name_search_input
@@ -369,3 +405,80 @@ class AdminManager:
         # because cursor.fetchone()[0] will return none and it can't index none
         except TypeError:
             pass
+
+    def validate_inputs_supplier(self):
+
+        name = self.name_input
+        street = self.street_input
+        zip_code = self.zip_code_input
+        city = self.city_input
+        country = self.country_input
+        phone_number = self.phone_number_input
+
+        if not all([name, street, zip_code, city, country, phone_number]):
+            messagebox.showerror("Error", "All fields are required to be filled.")
+            return False
+
+        if len(name) > 30:
+            messagebox.showerror("Error", "Supplier name cannot be longer than 30 characters.")
+            return False
+
+        if len(street) > 30:
+            messagebox.showerror("Error", "Street Address cannot be longer than 30 characters.")
+            return False
+
+        if len(zip_code) > 8:
+            messagebox.showerror("Error", "Zip Code cannot be longer than 8 characters.")
+            return False
+
+        if not zip_code.isdigit():
+            messagebox.showerror("Error", "Zip Code must be a number")
+            return False
+
+        if len(city) > 30:
+            messagebox.showerror("Error", "City cannot be longer than 30 characters.")
+            return False
+
+        if len(country) > 30:
+            messagebox.showerror("Error", "Country cannot be longer than 30 characters.")
+            return False
+
+        if len(phone_number) > 15:
+            messagebox.showerror("Error", "Phone number cannot be longer than 15 characters.")
+            return False
+
+        if not phone_number.isdigit():
+            messagebox.showerror("Error", "Phone number must be a number")
+            return False
+
+        return True
+
+    def admin_add_supplier(self, gui):
+
+        name = self.name_input
+        street = self.street_input
+        zip_code = self.zip_code_input
+        city = self.city_input
+        country = self.country_input
+        phone_number = self.phone_number_input
+
+        # here it's trying to insert the info from the text fields
+        try:
+            gui.cursor.execute('''SELECT * FROM Supplier WHERE supplier_name = ?''', (name,))
+            existing_supplier = gui.cursor.fetchone()
+            if existing_supplier:
+                # supplier with the same name already exists
+                messagebox.showerror("Error", "Supplier with this name already exists!")
+            else:
+                gui.cursor.execute('''
+                    INSERT INTO Supplier (supplier_name, address, zip_code, city, country, phone_number)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (name, street, zip_code, city, country, phone_number))
+
+                messagebox.showinfo("Success", "Supplier added successfully!")
+
+                gui.conn.commit()
+
+        # this is to prevent crashing if invalid info was inputted into the text fields
+        except sqlite3.IntegrityError:
+            print("invalid info inputted")
