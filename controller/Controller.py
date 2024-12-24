@@ -14,13 +14,13 @@ import datetime
 
 
 if __name__ == '__main__':
-    # Initialize the database
+
     db_manager = DatabaseManager('online_store.db')
     init_tables(db_manager.cursor)
     init_admin(db_manager.cursor)
 
-    # Initialize the GUI
-    gui = Gui(db_manager.cursor)
+    # init the GUI with the connection
+    gui = Gui(db_manager.conn)
 
     customer_manager = CustomerManager()
     admin_manager = AdminManager()
