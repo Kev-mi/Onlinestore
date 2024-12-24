@@ -1,5 +1,8 @@
 from tkinter import ttk, messagebox, simpledialog, filedialog, Button, Text, Scrollbar, Frame, TOP, END, VERTICAL, Entry, Label
 #from view.MainMenu import init_main_menu
+import sys, os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from model.MenuSwitcher import go_to_main_menu
 
 def admin_show_suppliers(admin_tab_1, gui):
 
@@ -44,7 +47,7 @@ def admin_menu(gui, admin_manager):
             4: lambda: admin_add_product_tab(gui.tabs.nametowidget(gui.tabs.select()), gui, admin_manager),
             5: lambda: admin_add_discount_tab(gui.tabs.nametowidget(gui.tabs.select())),
             6: lambda: admin_assign_discount(gui.tabs.nametowidget(gui.tabs.select()), gui),
-            7: lambda: admin_main_menu(gui.tabs.nametowidget(gui.tabs.select())),
+            7: lambda: admin_main_menu(gui.tabs.nametowidget(gui.tabs.select()), gui),
         }
 
         # this is because get just gets the number but doesn't call the switch_case dictionairy so if func lines are needed to call the dictionairy
@@ -56,36 +59,50 @@ def admin_menu(gui, admin_manager):
     gui.tabs.bind("<<NotebookTabChanged>>", lambda event: admin_tab_change(gui, admin_manager))
 
 
+def unbind_admin_menu_events(gui):
+    gui.tabs.unbind("<<NotebookTabChanged>>")
+
+
+def admin_logout(gui):
+    unbind_admin_menu_events(gui)
+
+    go_to_main_menu(
+        gui,
+        gui.switch_to_customer_menu,
+        gui.switch_to_admin_menu,
+    )
+
+
 def admin_search_products_tab(admin_tab_2, admin_manager, gui):
 
     product_id_search_label = Label(admin_tab_2, text="Product ID:")
-    product_id_search_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
-    product_id_search_input = Entry(admin_tab_2, width=30)
-    product_id_search_input.grid(row=0, column=1, padx=10, pady=10)
+    product_id_search_label.grid(row=0, column=0, padx=0, pady=5, sticky="w")
+    product_id_search_input = Entry(admin_tab_2, width=40)
+    product_id_search_input.grid(row=0, column=1, padx=0, pady=5)
 
     product_name_search_label = Label(admin_tab_2, text="Product name:")
-    product_name_search_label.grid(row=1, column=0, padx=10, pady=10, sticky="w")
-    product_name_search_input = Entry(admin_tab_2, width=30)
-    product_name_search_input.grid(row=1, column=1, padx=10, pady=10)
+    product_name_search_label.grid(row=1, column=0, padx=0, pady=5, sticky="w")
+    product_name_search_input = Entry(admin_tab_2, width=40)
+    product_name_search_input.grid(row=1, column=1, padx=0, pady=5)
 
     product_base_search_price_label = Label(admin_tab_2, text="Price:")
-    product_base_search_price_label.grid(row=0, column=2, padx=10, pady=10, sticky="w")
-    product_base_search_price_input = Entry(admin_tab_2, width=30)
-    product_base_search_price_input.grid(row=0, column=3, padx=10, pady=10)
+    product_base_search_price_label.grid(row=0, column=2, padx=0, pady=5, sticky="w")
+    product_base_search_price_input = Entry(admin_tab_2, width=40)
+    product_base_search_price_input.grid(row=0, column=3, padx=0, pady=5)
 
     product_supplier_search_label = Label(admin_tab_2, text="Product supplier:")
-    product_supplier_search_label.grid(row=1, column=2, padx=10, pady=10, sticky="w")
-    product_supplier_search_input = Entry(admin_tab_2, width=30)
-    product_supplier_search_input.grid(row=1, column=3, padx=10, pady=10)
+    product_supplier_search_label.grid(row=1, column=2, padx=0, pady=5, sticky="w")
+    product_supplier_search_input = Entry(admin_tab_2, width=40)
+    product_supplier_search_input.grid(row=1, column=3, padx=0, pady=5)
 
     submit_search_box_input_label = Button(admin_tab_2, text="Search for product", width=20,
                                    command=lambda: submit_search_info())
 
-    submit_search_box_input_label.grid(row=2, column=1, padx=10, pady=10, sticky="w")
+    submit_search_box_input_label.grid(row=2, column=1, padx=0, pady=5, sticky="w")
 
     #adjust height and width in the result box
     result_text = Text(admin_tab_2, width=137, height=40)
-    result_text.grid(row=3, column=0, columnspan=4, padx=10, pady=10)
+    result_text.grid(row=3, column=0, columnspan=4, padx=0, pady=5)
 
     # to format it correctly i choose the different lengths
     # product id is 10 because len(product ID) == 10, same logic applies to why "product quantity" is 16
@@ -96,14 +113,14 @@ def admin_search_products_tab(admin_tab_2, admin_manager, gui):
 
     def display_all_products(gui):
         gui.cursor.execute('''SELECT * FROM Product''')
-        products = cursor.fetchall()
+        products = gui.cursor.fetchall()
 
         result_text.delete('3.0', 'end')
         # inserting the product info inputted
         for product in products:
 
             if product[9] is not None:
-                cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (product[9],))
+                gui.cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (product[9],))
                 discount = cursor.fetchone()
                 result_text.insert('end',
                                    f"{product[0]:<10} | {product[1]:<16} | {product[6]:<25}| {product[3]:<10}| {product[5]:<25}| {product[2]:<15}| {discount[4]}| {discount[5]}\n")
@@ -116,19 +133,27 @@ def admin_search_products_tab(admin_tab_2, admin_manager, gui):
     # function that displays products when the tab is clicked on
     admin_tab_2.bind("<Visibility>", lambda event: display_all_products(gui))
 
+
+
+    admin_tab_2.grid_columnconfigure(4, weight=0)
+    admin_tab_2.grid_columnconfigure(5, weight=0)
+
     product_code_label_2 = Label(admin_tab_2, text="Product ID:")
-    product_code_label_2.grid(row=0, column=4, padx=10, pady=10, sticky="w")
-    product_code_input_2 = Entry(admin_tab_2, width=30)
-    product_code_input_2.grid(row=0, column=5, padx=10, pady=10)
+    product_code_label_2.grid(row=0, column=4, padx=(5, 2), pady=5, sticky="w")
+
+    product_code_input_2 = Entry(admin_tab_2, width=35)
+
+    product_code_input_2.place(relx=0.83, rely=0.007)
+
 
     submit_product_to_remove_label = Button(admin_tab_2, text="Delete Product", width=20,
                                    command=lambda: submit_product_to_remove())
 
-    submit_product_to_remove_label.grid(row=1, column=4, padx=10, pady=10, sticky="w")
+    submit_product_to_remove_label.grid(row=1, column=4, padx=5, pady=5, sticky="w")
 
     # showing current date
-    current_date_label = Label(admin_tab_2, text="Current date: " + str(admin_manager.get_current_date))
-    current_date_label.grid(row=2, column=4, padx=10, pady=10, sticky="w")
+    current_date_label = Label(admin_tab_2, text="Current date: " + str(admin_manager.get_current_date()))
+    current_date_label.place(relx=0.83, rely=0.085)
 
     def display_search_results(products):
 
@@ -199,19 +224,15 @@ def admin_search_products_tab(admin_tab_2, admin_manager, gui):
             admin_product_search()
 
 
-def admin_main_menu(admin_tab_8):
+def admin_main_menu(admin_tab_8, gui):
 
     admin_main_menu_button = ttk.Button(admin_tab_8, text="Logout", width=40,
-                                       command=lambda: admin_logout())
+                                       command=lambda: admin_logout(gui))
     admin_main_menu_button.grid(row=0, column=1, padx=10, pady=10, sticky="w")
 
 
 
 def admin_add_discount_tab(admin_tab_6):
-
-    global id_discount_input, name_discount_input, discount_input, lower_date_input, upper_date_input, product_code_input
-
-    global discount_id_2
 
     id_discount_label = Label(admin_tab_6, text="Discount ID:")
     id_discount_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
@@ -339,7 +360,6 @@ def validate_discount_add():
 
 
 def admin_add_supplier_tab(admin_tab_3):
-    global name_input, street_input, zip_code_input, city_input, country_input, phone_number_input
 
     name_label = Label(admin_tab_3, text="Name:")
     name_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
@@ -425,17 +445,6 @@ def admin_add_discount():
         print("invalid info inputted")
 
 
-def admin_logout():
-    #this is to clear all the admin tabs
-    for tab_id in tabs.tabs():
-        tabs.forget(tab_id)
-
-    # this is to clear the old window before creating a new one
-    root.destroy()
-    #this is to go back to main menu
-    main()
-
-
 def admin_order_history_tab(admin_tab_4, gui):
     gui.cursor.execute("SELECT * FROM Shopping_list")
     shopping_lists = gui.cursor.fetchall()
@@ -455,9 +464,6 @@ def admin_order_history_tab(admin_tab_4, gui):
 
 
 def admin_add_product_tab(admin_tab_5, gui, admin_manager):
-    global id_input_product, product_name_input, product_base_price_input, product_supplier_input, product_quantity_input
-
-    global product_id_input_2, product_quantity_input_2
 
     id_label = Label(admin_tab_5, text="Id:")
     id_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
@@ -521,7 +527,6 @@ def submit_product_quantity_edit_info():
 
 
 def admin_assign_discount(admin_tab_7, gui):
-    global selected_product_id, selected_discount_id
 
     # creating the frame that shows discount and products
     discount_frame = Frame(admin_tab_7)
@@ -606,6 +611,11 @@ def assign_selected_discount_to_product():
 
 
 def admin_menu_tabs_init(gui, admin_manager):
+    selected_tab = gui.tabs.select()
+    if selected_tab:
+        tab_widget = gui.root.nametowidget(selected_tab)
+        if tab_widget in gui.tabs_list:
+            gui.remove_tab(tab_widget)
 
     if gui.user_type_tab in gui.tabs_list:
         gui.remove_tab(gui.user_type_tab)
