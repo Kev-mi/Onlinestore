@@ -12,6 +12,7 @@ from model.CustomerManager import CustomerManager
 from model.AdminManager import AdminManager
 import datetime
 
+
 if __name__ == '__main__':
     # Initialize the database
     db_manager = DatabaseManager('online_store.db')
@@ -21,8 +22,8 @@ if __name__ == '__main__':
     # Initialize the GUI
     gui = Gui(db_manager.cursor)
 
-    customer_manager = CustomerManager(db_manager.cursor)
-    admin_manager = AdminManager(db_manager.cursor)
+    customer_manager = CustomerManager()
+    admin_manager = AdminManager()
 
     admin_manager.set_current_date(datetime.date.today().strftime("%Y-%m-%d"))
 
@@ -30,7 +31,7 @@ if __name__ == '__main__':
         CustomerMenu.customer_menu_tabs_init(gui, customer_manager)
 
     def switch_to_admin_menu():
-        AdminMenu.admin_menu_tabs_init(gui, admin_manager)
+        MainMenu.verifyAdminLogin(gui, AdminMenu, admin_manager)
 
 
     gui.switch_to_customer_menu = switch_to_customer_menu
@@ -40,22 +41,9 @@ if __name__ == '__main__':
     MainMenu.init_main_menu(
         gui,
         switch_to_customer_menu,
-        switch_to_admin_menu,
-        lambda: go_to_main_menu(gui, switch_to_customer_menu, switch_to_admin_menu, customer_manager)
+        switch_to_admin_menu
     )
 
 
     # Run the application
     gui.run()
-
-
-def go_to_main_menu(gui, switch_to_customer_menu, switch_to_admin_menu, customer_manager):
-
-    gui.remove_all_tabs()
-
-    MainMenu.init_main_menu(
-        gui,
-        switch_to_customer_menu,
-        switch_to_admin_menu,
-        lambda: go_to_main_menu(gui, switch_to_customer_menu, switch_to_admin_menu, customer_manager)
-    )
