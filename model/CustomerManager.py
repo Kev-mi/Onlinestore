@@ -1,5 +1,6 @@
 import view.CustomerMenu as CustomerMenu
 from tkinter import ttk, messagebox, simpledialog, filedialog, Button, Text, Scrollbar, Frame, TOP, END, VERTICAL, Entry, Label
+import sqlite3
 
 class CustomerManager:
 
@@ -126,6 +127,18 @@ class CustomerManager:
     def get_customer_phone_number(self):
         return self.phone_number
 
+    def set_customer_username_login_input(self,customer_username_login_input):
+        self.customer_username_login_input = customer_username_login_input
+
+    def get_customer_username_login_input(self):
+        return self.customer_username_login_input
+
+    def set_customer_password_login_input(self, customer_password_login_input):
+        self.customer_password_login_input = customer_password_login_input
+
+    def get_customer_password_login_input(self):
+        return self.customer_password_login_input
+
     def get_discounted_products(self, gui):
 
         gui.cursor.execute("SELECT * FROM Product")
@@ -168,9 +181,39 @@ class CustomerManager:
 
             messagebox.showinfo("Success", "Customer created successfully")
 
-            conn.commit()
+            gui.conn.commit()
         except Exception as e:
             messagebox.showerror("Error", f" couldn't create customer reason: {str(e)}")
+
+    def validate_customer_login(self, gui):
+
+        customer_username = self.customer_username_login_input
+        customer_password = self.customer_password_login_input
+
+        if not all([customer_username, customer_password]):
+            messagebox.showerror("Error", "All fields are required to be filled.")
+            return False
+
+        if self.customer_logged_in == True:
+            messagebox.showerror("Error", "Customer is already logged in")
+            return False
+
+        if len(customer_username) > 30:
+            messagebox.showerror("Error", "Username cannot be longer than 30 characters")
+            return False
+
+        if len(customer_password) > 30:
+            messagebox.showerror("Error", "Password cannot be longer than 30 characters")
+            return False
+
+        gui.cursor.execute("SELECT COUNT(*) FROM User WHERE username = ? AND password = ?",
+                       (customer_username, customer_password))
+        count = gui.cursor.fetchone()[0]
+        if count == 0:
+            messagebox.showerror("Error", "incorrect login details, couldn't login")
+            return False
+
+        return True
 
 
     def validate_user_sign_up(self, gui):
@@ -240,7 +283,7 @@ class CustomerManager:
 
     def customer_login_fucntion(self):
         self.customer_logged_in = True
-        self.current_user_name = customer_username_login_input.get().strip()
+        self.current_user_name = self.customer_username_login_input
         self.customer_username_login_input = ""
         messagebox.showinfo("Success", "Customer got logged in")
 
