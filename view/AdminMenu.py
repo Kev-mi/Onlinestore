@@ -17,19 +17,16 @@ def admin_show_suppliers(admin_tab_1, gui):
     result_text_supplier.insert('end', header)
     result_text_supplier.insert('end', '-' * 160 + '\n')
 
-    def display_all_supplier(gui):
-        gui.cursor.execute('''SELECT * FROM Supplier''')
-        suppliers = gui.cursor.fetchall()
+    gui.cursor.execute('''SELECT * FROM Supplier''')
+    suppliers = gui.cursor.fetchall()
 
-        result_text_supplier.delete('3.0', 'end')
-        # inserting the supplier info inputted
-        for supplier in suppliers:
-            result_text_supplier.insert('end',
-                                        f"{supplier[1]:<30} | {supplier[6]:<16} | {supplier[2]:<30}| {supplier[3]:<8}| {supplier[4]:<30}| {supplier[5]:<30}\n")
-            result_text_supplier.insert('end', '-' * 160 + '\n')
+    result_text_supplier.delete('3.0', 'end')
+    # inserting the supplier info inputted
+    for supplier in suppliers:
+        result_text_supplier.insert('end',
+                                    f"{supplier[1]:<30} | {supplier[6]:<16} | {supplier[2]:<30}| {supplier[3]:<8}| {supplier[4]:<30}| {supplier[5]:<30}\n")
+        result_text_supplier.insert('end', '-' * 160 + '\n')
 
-    # function that displays suppliers when the tab is clicked on
-    admin_tab_1.bind("<Visibility>", lambda event: display_all_supplier(gui))
 
 
 def admin_menu(gui, admin_manager):
@@ -42,7 +39,7 @@ def admin_menu(gui, admin_manager):
         switch_case = {
             0: lambda: admin_show_suppliers(gui.tabs.nametowidget(gui.tabs.select()), gui),
             1: lambda: admin_search_products_tab(gui.tabs.nametowidget(gui.tabs.select()),admin_manager, gui),
-            2: lambda: admin_add_supplier_tab(gui.tabs.nametowidget(gui.tabs.select())),
+            2: lambda: admin_add_supplier_tab(gui.tabs.nametowidget(gui.tabs.select()), gui, admin_manager),
             3: lambda: admin_order_history_tab(gui.tabs.nametowidget(gui.tabs.select()), gui),
             4: lambda: admin_add_product_tab(gui.tabs.nametowidget(gui.tabs.select()), gui, admin_manager),
             5: lambda: admin_add_discount_tab(gui.tabs.nametowidget(gui.tabs.select(), gui)),
@@ -371,7 +368,7 @@ def validate_discount_add():
     return True
 
 
-def admin_add_supplier_tab(admin_tab_3):
+def admin_add_supplier_tab(admin_tab_3, gui, admin_manager):
 
     name_label = Label(admin_tab_3, text="Name:")
     name_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
@@ -404,8 +401,33 @@ def admin_add_supplier_tab(admin_tab_3):
     phone_number_input.grid(row=5, column=1, padx=10, pady=10)
 
     submit_supplier_info_label = Button(admin_tab_3, text="Submit supplier", width=40,
-                                        command=lambda: submit_supplier_info())
+                                        command=lambda: submit_supplier_info_setter(admin_manager, gui,
+                                                                             name_input.get(),
+                                                                             street_input.get(),
+                                                                             zip_code_input.get(),
+                                                                             city_input.get(),
+                                                                             country_input.get(),
+                                                                             phone_number_input.get()
+                                                                             ))
+
     submit_supplier_info_label.grid(row=6, column=1, padx=10, pady=10, sticky="w")
+
+
+def submit_supplier_info_setter(admin_manager, gui, name_input, street_input, zip_code_input, city_input, country_input, phone_number_input):
+
+    admin_manager.set_name_input(name_input)
+    admin_manager.set_street_input(street_input)
+    admin_manager.set_zip_code_input(zip_code_input)
+    admin_manager.set_city_input(city_input)
+    admin_manager.set_country_input(country_input)
+    admin_manager.set_phone_number_input(phone_number_input)
+
+    submit_supplier_info(admin_manager, gui)
+
+
+def submit_supplier_info(admin_manager, gui):
+    if admin_manager.validate_inputs_supplier():
+        admin_manager.admin_add_supplier(gui)
 
 
 def admin_add_discount(gui):
