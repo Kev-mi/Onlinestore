@@ -181,7 +181,7 @@ def display_all_products(customer_manager, product_frame):
     for widget in product_frame.winfo_children():
         widget.destroy()
 
-    products = customer_manager.get_all_products()
+    products = customer_manager.get_all_products(gui)
     for product in products:
         add_product_to_frame(product_frame, product)
 
