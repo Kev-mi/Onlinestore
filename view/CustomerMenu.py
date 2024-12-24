@@ -12,11 +12,11 @@ def customer_menu(gui, customer_manager):
         current_tab_index = gui.tabs.index(gui.tabs.select())
         print(f"selected customer index is: {current_tab_index}")
         switch_case = {
-            0: lambda: customer_search_products_tab(gui.tabs.nametowidget(gui.tabs.select()), customer_manager),
+            0: lambda: customer_search_products_tab(gui, gui.tabs.nametowidget(gui.tabs.select()), customer_manager),
             1: lambda: customer_sign_up(gui,gui.tabs.nametowidget(gui.tabs.select()), customer_manager),
             2: lambda: customer_main_menu(gui.tabs.nametowidget(gui.tabs.select()), gui, customer_manager),
             3: lambda: customer_login(gui.tabs.nametowidget(gui.tabs.select()), gui, customer_manager),
-            4: lambda: customer_logout_menu(gui.tabs.nametowidget(gui.tabs.select()),customer_manager),
+            4: lambda: customer_logout_menu(gui.tabs.nametowidget(gui.tabs.select()), customer_manager, gui),
             5: lambda: customer_current_order_tab(gui.tabs.nametowidget(gui.tabs.select()), gui, customer_manager),
             6: lambda: customer_order_history_tab(gui, customer_manager),
         }
@@ -30,7 +30,7 @@ def customer_menu(gui, customer_manager):
     gui.tabs.bind("<<NotebookTabChanged>>", lambda event: customer_tab_change(gui, customer_manager))
 
 
-def customer_search_products_tab(customer_tab_1, customer_manager):
+def customer_search_products_tab(gui,customer_tab_1, customer_manager):
     print("this works")
     # Input fields
     product_id_input = Entry(customer_tab_1, width=30)
@@ -65,7 +65,7 @@ def customer_search_products_tab(customer_tab_1, customer_manager):
     product_frame.grid(row=3, column=0, columnspan=4, padx=5, pady=5)
 
     # Display all products on tab expose
-    customer_tab_1.bind("<Expose>", lambda event: display_all_products(customer_manager, product_frame))
+    customer_tab_1.bind("<Expose>", lambda event: display_all_products(customer_manager, product_frame, gui))
 
 
 # form for customer sign up
@@ -154,29 +154,55 @@ def customer_sign_up_setter(gui,customer_manager,
                             customer_phone_number_input):
 
     customer_manager.set_customer_username(customer_username_input)
-
     customer_manager.set_customer_password(customer_password_input)
-
     customer_manager.set_customer_first_name(customer_first_name_input)
-
     customer_manager.set_customer_last_name(customer_last_name_input)
-
     customer_manager.set_customer_email(customer_email_input)
-
     customer_manager.set_customer_address(customer_address_input)
-
     customer_manager.set_customer_city(customer_city_input)
-
     customer_manager.set_customer_country(customer_country_input)
-
     customer_manager.set_customer_phone_number(customer_phone_number_input)
-
 
     submit_customer_sign_up_info(gui, customer_manager)
 
 
+def customer_login(customer_tab_4, gui, customer_manager):
+    customer_username_login_label = ttk.Label(customer_tab_4, text="Username:")
+    customer_username_login_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
 
-def display_all_products(customer_manager, product_frame):
+    customer_username_login_input = ttk.Entry(customer_tab_4, width=30)
+    customer_username_login_input.grid(row=0, column=1, padx=10, pady=10)
+
+    customer_password_login_label = ttk.Label(customer_tab_4, text="Password:")
+    customer_password_login_label.grid(row=1, column=0, padx=10, pady=10, sticky="w")
+
+    customer_password_login_input = ttk.Entry(customer_tab_4, width=30)
+    customer_password_login_input.grid(row=1, column=1, padx=10, pady=10)
+
+    customer_login_button = ttk.Button(customer_tab_4, text="Log in", width=40,
+                                       command=lambda: customer_login_info_setter(gui, customer_manager,
+                                                                                  customer_username_login_input.get().strip(),
+                                                                                  customer_password_login_input.get().strip()))
+    customer_login_button.grid(row=9, column=1, padx=10, pady=10, sticky="w")
+
+    customer_menu(gui, customer_manager)
+
+
+def customer_login_info_setter(gui, customer_manager,customer_username_login_input, customer_password_login_input):
+
+    customer_manager.set_customer_username_login_input(customer_username_login_input)
+    customer_manager.set_customer_password_login_input(customer_password_login_input)
+
+    submit_customer_login_info(gui, customer_manager)
+
+
+def submit_customer_login_info(gui, customer_manager):
+    if customer_manager.validate_customer_login(gui):
+        customer_manager.customer_login_fucntion()
+        customer_menu(gui, customer_manager)
+
+
+def display_all_products(customer_manager, product_frame, gui):
 
     for widget in product_frame.winfo_children():
         widget.destroy()
@@ -222,33 +248,6 @@ def customer_main_menu(customer_tab_3, gui, customer_manager):
     customer_login_button.grid(row=0, column=1, padx=10, pady=10, sticky="w")
 
 
-def customer_login(customer_tab_4, gui, customer_manager):
-
-    customer_username_login_label = ttk.Label(customer_tab_4, text="Username:")
-    customer_username_login_label.grid(row=0, column=0, padx=10, pady=10, sticky="w")
-
-    customer_username_login_input = ttk.Entry(customer_tab_4, width=30)
-    customer_username_login_input.grid(row=0, column=1, padx=10, pady=10)
-
-    customer_password_login_label = ttk.Label(customer_tab_4, text="Password:")
-    customer_password_login_label.grid(row=1, column=0, padx=10, pady=10, sticky="w")
-
-    customer_password_login_input = ttk.Entry(customer_tab_4, width=30)
-    customer_password_login_input.grid(row=1, column=1, padx=10, pady=10)
-
-    customer_login_button = ttk.Button(customer_tab_4, text="Log in", width=40,
-                                        command=lambda: submit_customer_login_info())
-    customer_login_button.grid(row=9, column=1, padx=10, pady=10, sticky="w")
-
-    customer_menu(gui, customer_manager)
-
-
-def submit_customer_login_info(gui, customer_manager):
-    if validate_customer_login():
-        customer_login_fucntion()
-        customer_menu(gui, customer_manager)
-
-
 def customer_go_to_main_menu(gui, customer_manager):
 
     # this is to go back to main menu
@@ -274,15 +273,15 @@ def submit_customer_sign_up_info(gui, customer_manager):
 def unbind_customer_menu_events(gui):
     gui.tabs.unbind("<<NotebookTabChanged>>")
 
-def customer_logout_menu(customer_tab_5, customer_manager):
+def customer_logout_menu(customer_tab_5, customer_manager, gui):
 
     customer_logout_button = ttk.Button(customer_tab_5, text="logout", width=40,
-                                       command=lambda: customer_logout_function(customer_manager))
+                                       command=lambda: customer_logout_function(gui, customer_manager))
 
     customer_logout_button.grid(row=0, column=1, padx=10, pady=10, sticky="w")
 
 
-def customer_logout_function(customer_manager):
+def customer_logout_function(gui, customer_manager):
 
     if customer_manager.get_customer_logged_in() == True:
         customer_manager.set_customer_logged_in(False)
