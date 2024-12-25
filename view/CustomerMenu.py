@@ -319,44 +319,46 @@ def customer_current_order_tab(customer_tab_6, gui, customer_manager):
     result_text = tk.Text(customer_tab_6, width=137, height=40)
     result_text.grid(row=3, column=0, columnspan=4, padx=10, pady=10)
 
-    def display_all_products(gui):
-        gui.cursor.execute('SELECT Shopping_list_id FROM Shopping_list WHERE username = ? AND confirmed_order = FALSE ORDER BY Shopping_list_id DESC LIMIT 1', (current_user_name,))
-        active_shopping_list = cursor.fetchone()
+    gui.cursor.execute(
+        'SELECT Shopping_list_id FROM Shopping_list WHERE username = ? AND confirmed_order = FALSE ORDER BY Shopping_list_id DESC LIMIT 1',
+        (current_user_name,))
+    active_shopping_list = cursor.fetchone()
 
-        if active_shopping_list:
-            shopping_list_id = active_shopping_list[0]
-            gui.cursor.execute('SELECT * FROM Shopping_list_item WHERE Shopping_list_id = ? AND ordered = FALSE', (shopping_list_id,))
-            products = cursor.fetchall()
-        else:
-            products = []
+    if active_shopping_list:
+        shopping_list_id = active_shopping_list[0]
+        gui.cursor.execute('SELECT * FROM Shopping_list_item WHERE Shopping_list_id = ? AND ordered = FALSE',
+                           (shopping_list_id,))
+        products = cursor.fetchall()
+    else:
+        products = []
 
-        result_text.delete('1.0', tk.END)
-        total_cost = 0
+    result_text.delete('1.0', tk.END)
+    total_cost = 0
 
-        for product in products:
-            gui.cursor.execute('SELECT * FROM Product WHERE product_code = ?', (product[2],))
-            product_details = cursor.fetchone()
+    for product in products:
+        gui.cursor.execute('SELECT * FROM Product WHERE product_code = ?', (product[2],))
+        product_details = cursor.fetchone()
 
-            discount_code = product_details[-1]
+        discount_code = product_details[-1]
 
-            gui.cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (discount_code,))
-            discount = cursor.fetchone()
+        gui.cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (discount_code,))
+        discount = cursor.fetchone()
 
-            if discount is not None:
-                if discount[4] < discount[3] < discount[5]:
-                    discount_rate = discount[1]
-                else:
-                    discount_rate = 0
+        if discount is not None:
+            if discount[4] < discount[3] < discount[5]:
+                discount_rate = discount[1]
             else:
                 discount_rate = 0
+        else:
+            discount_rate = 0
 
-            if product_details:
-                item_total_cost = product[3] * product_details[3]
-                discounted_cost = item_total_cost * ((100 - float(discount_rate)) / 100)
-                total_cost += discounted_cost
-                result_text.insert(tk.END, f"Product Name: {product_details[6]} Quantity in order: {product[3]} Order cost: {round(discounted_cost, 2)}\n")
+        if product_details:
+            item_total_cost = product[3] * product_details[3]
+            discounted_cost = item_total_cost * ((100 - float(discount_rate)) / 100)
+            total_cost += discounted_cost
+            result_text.insert(tk.END,
+                               f"Product Name: {product_details[6]} Quantity in order: {product[3]} Order cost: {round(discounted_cost, 2)}\n")
 
-    gui.tabs.bind("<<NotebookTabChanged>>", lambda event: display_all_products(gui))
 
     submit_supplier_info_label = ttk.Button(customer_tab_6, text="Place order", width=40, command=lambda: customer_place_order())
     submit_supplier_info_label.grid(row=6, column=1, padx=10, pady=10, sticky="w")
