@@ -163,6 +163,42 @@ class AdminManager:
     def get_phone_number_input(self):
         return self.phone_number_input
 
+    def set_id_discount_input(self, discount):
+        self.id_discount_input = discount
+
+    def get_id_discount_input(self):
+        return self.id_discount_input
+
+    def set_name_discount_input(self, discount):
+        self.name_discount_input = discount
+
+    def get_name_discount_input(self):
+        return self.name_discount_input
+
+    def set_lower_date_input(self, lower_input_date):
+        self.lower_date_input = lower_input_date
+
+    def get_lower_date_input(self):
+        return self.lower_date_input
+
+    def set_upper_date_input(self, upper_date):
+        self.upper_date_input = upper_date
+
+    def get_upper_date_input(self):
+        return self.upper_date_input
+
+    def set_product_code_input(self, prouct_code):
+        self.product_code = prouct_code
+
+    def get_product_code_input(self):
+        return self.product_code_input
+
+    def set_discount_id_2(self, discount_id_2):
+        self.discount_id_2 = discount_id_2
+
+    def get_discount_id_2(self):
+        return self.discount_id_2
+
     def validate_search_info(self):
         product_id = self.product_id_search_input
         product_name = self.product_name_search_input
@@ -482,3 +518,122 @@ class AdminManager:
         # this is to prevent crashing if invalid info was inputted into the text fields
         except sqlite3.IntegrityError:
             print("invalid info inputted")
+
+    def validate_discount_add(self):
+
+        discount_id = self.id_discount_input
+        discount_name = self.name_discount_input
+        discount_percentage = self.discount_input
+        lower_date = self.lower_date_input
+        upper_date = self.upper_date_input
+        product_id_discount = self.product_code_input
+
+        if not all([discount_id, discount_name, discount_percentage, lower_date, upper_date]):
+            messagebox.showerror("Error", "All fields are required to be filled.")
+            return False
+
+        if len(discount_id) > 8:
+            messagebox.showerror("Error", "Discount ID cannot be longer than 8 characters.")
+            return False
+
+        if not discount_id.isdigit():
+            messagebox.showerror("Error", "Discount ID number must be a number")
+            return False
+
+        if len(discount_name) > 30:
+            messagebox.showerror("Error", "Quantity cannot be longer than 8 digits.")
+            return False
+
+        if len(discount_percentage) > 10:
+            messagebox.showerror("Error", "Discount percentage cannot be longer than 10 digits.")
+            return False
+
+        try:
+            discount_percentage = float(discount_percentage)
+            if discount_percentage <= 0 or discount_percentage >= 100:
+                messagebox.showerror("Error", "Discount percentage must be greater than 0 and less than 100.")
+                return False
+        except ValueError:
+            messagebox.showerror("Error", "Discount percentage must be a number.")
+            return False
+
+        # using regex to check if inputted date is in the correct format
+        date_pattern = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+
+        if not date_pattern.match(lower_date):
+            messagebox.showerror("Error", "Lower date must be in YYYY-MM-DD format.")
+            return False
+
+        if not date_pattern.match(upper_date):
+            messagebox.showerror("Error", "Upper date must be in YYYY-MM-DD format.")
+            return False
+
+        # lower date being greater than upper date is impossible for a discount to work
+
+        if lower_date > upper_date:
+            messagebox.showerror("Error", "Upper date must be equal to or greater than lower date.")
+            return False
+
+        if product_id_discount != "":
+            if len(product_id_discount) > 8:
+                messagebox.showerror("Error", "Product ID cannot be longer than 8 characters.")
+                return False
+
+            if not product_id_discount.isdigit():
+                messagebox.showerror("Error", "Product ID number must be a number")
+                return False
+
+            gui.cursor.execute("SELECT COUNT(*) FROM Product WHERE product_code = ?", (product_id_discount,))
+            result = gui.cursor.fetchone()[0]
+            if result == 0:
+                messagebox.showerror("Error", "Product with the given ID does not exist.")
+                return False
+
+        return True
+
+    def admin_add_discount(gui):
+
+        id_discount = self.id_discount_input
+        name_discount = self.name_discount_input
+        discount_percentage = self.discount_input
+        lower_date = self.lower_date_input
+        upper_date = self.upper_date_input
+        product_id_discount = self.product_code_input
+
+        try:
+            if product_id_discount != "":
+                # insert the discount
+                cursor.execute('''
+                    INSERT INTO Discount (discount_code, discount_category, discount_percentage, start_date, end_date, product_code)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (id_discount, name_discount, discount_percentage, lower_date, upper_date, product_id_discount))
+
+                cursor.execute('''
+                        UPDATE Product
+                        SET Discount_ID = ?
+                        WHERE product_code = ?
+                    ''', (id_discount, product_id_discount))
+
+                gui.conn.commit()
+
+                messagebox.showinfo("Success", "Discount added!")
+
+                gui.conn.commit()
+            else:
+                gui.cursor.execute('''
+                              INSERT INTO Discount (discount_code, discount_category, discount_percentage, start_date, end_date)
+                              VALUES (?, ?, ?, ?, ?)
+                          ''', (
+                    id_discount, name_discount, discount_percentage, lower_date, upper_date))
+
+                messagebox.showinfo("Success", "Discount added!")
+
+                gui.conn.commit()
+
+
+        except sqlite3.IntegrityError:
+            print("invalid info inputted")
+
+
+
+
