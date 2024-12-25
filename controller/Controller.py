@@ -12,7 +12,6 @@ from model.CustomerManager import CustomerManager
 from model.AdminManager import AdminManager
 import datetime
 
-
 if __name__ == '__main__':
 
     db_manager = DatabaseManager('online_store.db')
