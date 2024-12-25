@@ -4,6 +4,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.MenuSwitcher import go_to_main_menu
 
+
 def admin_show_suppliers(admin_tab_1, gui):
 
     # adjust height and width in the result box
@@ -42,7 +43,7 @@ def admin_menu(gui, admin_manager):
             2: lambda: admin_add_supplier_tab(gui.tabs.nametowidget(gui.tabs.select()), gui, admin_manager),
             3: lambda: admin_order_history_tab(gui.tabs.nametowidget(gui.tabs.select()), gui),
             4: lambda: admin_add_product_tab(gui.tabs.nametowidget(gui.tabs.select()), gui, admin_manager),
-            5: lambda: admin_add_discount_tab(gui.tabs.nametowidget(gui.tabs.select(), gui)),
+            5: lambda: admin_add_discount_tab(gui.tabs.nametowidget(gui.tabs.select()),gui),
             6: lambda: admin_assign_discount(gui.tabs.nametowidget(gui.tabs.select()), gui),
             7: lambda: admin_main_menu(gui.tabs.nametowidget(gui.tabs.select()), gui),
         }
@@ -274,7 +275,14 @@ def admin_add_discount_tab(admin_tab_6, gui):
     product_code_input.grid(row=3, column=1, padx=10, pady=10)
 
     submit_discount_label = Button(admin_tab_6, text="Submit discount", width=40,
-                                        command=lambda: submit_discount_info(gui))
+                                        command=lambda: submit_discount_info_setter(gui, admin_manager,
+                                                                                    id_discount_input.get(),
+                                                                                    name_discount_input.get(),
+                                                                                    discount_input.get(),
+                                                                                    lower_date_input.get(),
+                                                                                    upper_date_input.get(),
+                                                                                    product_code_input.get()))
+
 
     submit_discount_label.grid(row=6, column=1, padx=10, pady=10, sticky="w")
 
@@ -289,83 +297,21 @@ def admin_add_discount_tab(admin_tab_6, gui):
     submit_discount_to_remove_label.grid(row=1, column=5, padx=10, pady=10, sticky="w")
 
 
-def submit_discount_info(gui):
-    if validate_discount_add():
-        admin_add_discount(gui)
+def submit_discount_info_setter(gui, admin_manager, id_discount, name_discount, discount_percentage, lower_date, upper_date, product_id_discount):
+
+    admin_manager.set_id_discount_input(id_discount)
+    admin_manager.set_name_discount_input(name_discount)
+    admin_manager.set_discount_input(discount_percentage)
+    admin_manager.set_lower_date_input(lower_date)
+    admin_manager.set_upper_date_input(upper_date)
+    admin_manager.set_product_code_input(product_id_discount)
+
+    submit_discount_info(gui, admin_manager)
 
 
-def validate_discount_add():
-
-    discount_id = id_discount_input.get()
-    discount_name = name_discount_input.get()
-    discount_percentage = discount_input.get()
-    lower_date = lower_date_input.get()
-    upper_date = upper_date_input.get()
-    product_id_discount = product_code_input.get()
-
-    if not all([discount_id, discount_name, discount_percentage, lower_date, upper_date]):
-        messagebox.showerror("Error", "All fields are required to be filled.")
-        return False
-
-    if len(discount_id) > 8:
-        messagebox.showerror("Error", "Discount ID cannot be longer than 8 characters.")
-        return False
-
-    if not discount_id.isdigit():
-        messagebox.showerror("Error", "Discount ID number must be a number")
-        return False
-
-    if len(discount_name) > 30:
-        messagebox.showerror("Error", "Quantity cannot be longer than 8 digits.")
-        return False
-
-    if len(discount_percentage) > 10:
-        messagebox.showerror("Error", "Discount percentage cannot be longer than 10 digits.")
-        return False
-
-    try:
-        discount_percentage = float(discount_percentage)
-        if discount_percentage <= 0 or discount_percentage >= 100:
-            messagebox.showerror("Error", "Discount percentage must be greater than 0 and less than 100.")
-            return False
-    except ValueError:
-        messagebox.showerror("Error", "Discount percentage must be a number.")
-        return False
-
-
-    # using regex to check if inputted date is in the correct format
-    date_pattern = re.compile(r'^\d{4}-\d{2}-\d{2}$')
-
-    if not date_pattern.match(lower_date):
-        messagebox.showerror("Error", "Lower date must be in YYYY-MM-DD format.")
-        return False
-
-    if not date_pattern.match(upper_date):
-        messagebox.showerror("Error", "Upper date must be in YYYY-MM-DD format.")
-        return False
-
-    # lower date being greater than upper date is impossible for a discount to work
-
-    if lower_date > upper_date:
-        messagebox.showerror("Error", "Upper date must be equal to or greater than lower date.")
-        return False
-
-    if product_id_discount != "":
-        if len(product_id_discount) > 8:
-            messagebox.showerror("Error", "Product ID cannot be longer than 8 characters.")
-            return False
-
-        if not product_id_discount.isdigit():
-            messagebox.showerror("Error", "Product ID number must be a number")
-            return False
-
-        cursor.execute("SELECT COUNT(*) FROM Product WHERE product_code = ?", (product_id_discount,))
-        result = cursor.fetchone()[0]
-        if result == 0:
-            messagebox.showerror("Error", "Product with the given ID does not exist.")
-            return False
-
-    return True
+def submit_discount_info(gui, admin_manager):
+    if admin_manager.validate_discount_add(gui):
+        admin_manager.admin_add_discount(gui)
 
 
 def admin_add_supplier_tab(admin_tab_3, gui, admin_manager):
@@ -400,83 +346,44 @@ def admin_add_supplier_tab(admin_tab_3, gui, admin_manager):
     phone_number_input = Entry(admin_tab_3, width=30)
     phone_number_input.grid(row=5, column=1, padx=10, pady=10)
 
-    submit_supplier_info_label = Button(admin_tab_3, text="Submit supplier", width=40,
-                                        command=lambda: submit_supplier_info_setter(admin_manager, gui,
-                                                                             name_input.get(),
-                                                                             street_input.get(),
-                                                                             zip_code_input.get(),
-                                                                             city_input.get(),
-                                                                             country_input.get(),
-                                                                             phone_number_input.get()
-                                                                             ))
-
+    submit_supplier_info_label = Button(
+        admin_tab_3, text="Submit supplier", width=40,
+        command=lambda: submit_supplier_info_setter(
+            admin_manager, gui,
+            name_input, street_input, zip_code_input,
+            city_input, country_input, phone_number_input
+        )
+    )
     submit_supplier_info_label.grid(row=6, column=1, padx=10, pady=10, sticky="w")
 
 
-def submit_supplier_info_setter(admin_manager, gui, name_input, street_input, zip_code_input, city_input, country_input, phone_number_input):
+# function that is setting the inputted values as attributes inside the adminManager class
+def submit_supplier_info_setter(admin_manager, gui, name_input, street_input, zip_code_input, city_input, country_input,
+                                phone_number_input):
 
-    admin_manager.set_name_input(name_input)
-    admin_manager.set_street_input(street_input)
-    admin_manager.set_zip_code_input(zip_code_input)
-    admin_manager.set_city_input(city_input)
-    admin_manager.set_country_input(country_input)
-    admin_manager.set_phone_number_input(phone_number_input)
+    # setting the input values
+    admin_manager.set_name_input(name_input.get())
+    admin_manager.set_street_input(street_input.get())
+    admin_manager.set_zip_code_input(zip_code_input.get())
+    admin_manager.set_city_input(city_input.get())
+    admin_manager.set_country_input(country_input.get())
+    admin_manager.set_phone_number_input(phone_number_input.get())
 
+    # clears the input fields after supplier info has been submitted
+    name_input.delete(0, 'end')
+    street_input.delete(0, 'end')
+    zip_code_input.delete(0, 'end')
+    city_input.delete(0, 'end')
+    country_input.delete(0, 'end')
+    phone_number_input.delete(0, 'end')
+
+    # function that submits the supplier info
     submit_supplier_info(admin_manager, gui)
 
 
 def submit_supplier_info(admin_manager, gui):
     if admin_manager.validate_inputs_supplier():
         admin_manager.admin_add_supplier(gui)
-
-
-def admin_add_discount(gui):
-    id_discount = id_discount_input.get()
-    name_discount = name_discount_input.get()
-    discount_percentage = discount_input.get()
-    lower_date = lower_date_input.get()
-    upper_date = upper_date_input.get()
-    product_id_discount = product_code_input.get()
-
-    try:
-        if product_id_discount != "":
-        # insert the discount
-            cursor.execute('''
-                INSERT INTO Discount (discount_code, discount_category, discount_percentage, start_date, end_date, product_code)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (id_discount, name_discount, discount_percentage, lower_date, upper_date, product_id_discount))
-
-            cursor.execute('''
-                    UPDATE Product
-                    SET Discount_ID = ?
-                    WHERE product_code = ?
-                ''', (id_discount, product_id_discount))
-
-            gui.conn.commit()
-
-            messagebox.showinfo("Success", "Discount added!")
-
-            gui.conn.commit()
-        else:
-            gui.cursor.execute('''
-                          INSERT INTO Discount (discount_code, discount_category, discount_percentage, start_date, end_date)
-                          VALUES (?, ?, ?, ?, ?)
-                      ''', (
-            id_discount, name_discount, discount_percentage, lower_date, upper_date))
-
-            messagebox.showinfo("Success", "Discount added!")
-
-            gui.conn.commit()
-
-        id_discount_input.delete(0, END)
-        name_discount_input.delete(0, END)
-        discount_input.delete(0, END)
-        lower_date_input.delete(0, END)
-        upper_date_input.delete(0, END)
-        product_code_input.delete(0, END)
-
-    except sqlite3.IntegrityError:
-        print("invalid info inputted")
 
 
 def admin_order_history_tab(admin_tab_4, gui):
