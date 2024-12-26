@@ -396,7 +396,8 @@ def admin_order_history_tab(admin_tab_4, gui, admin_manager):
         for shopping_list in shopping_lists:
             gui.cursor.execute('''SELECT total_cost FROM Shopping_list WHERE Shopping_list_id = ? ''', (shopping_list[0],))
             total_cost = gui.cursor.fetchone()[0]
-            if total_cost is not None:
+            # to make sure it only shows orders
+            if total_cost is not None and total_cost > 0:
                 btn = Button(order_history_frame,
                              text=f"Shopping List Number: {shopping_list[0]} Total Price: {round(total_cost, 2)} \n",
                              command=lambda idx=shopping_list[0]: admin_manager.select_shopping_list_admin(idx, gui),
