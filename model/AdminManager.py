@@ -332,13 +332,17 @@ class AdminManager:
             messagebox.showerror("Error", "Product ID number must be a number")
             return False
 
-        if len(base_price) > 10:
+        if len(base_price) > 10 :
             messagebox.showerror("Error", "Base Price cannot be longer than 10 digits.")
             return False
 
         # checking if base price is integer or float value
         try:
             float_value = float(base_price)
+            # checking if the base price is at least greater than 0
+            if float_value <= 0:
+                messagebox.showerror("Error", "Base Price must be at least greater than 0.")
+                return False
         except ValueError:
             messagebox.showerror("Error", "Base Price must be a number.")
             return False
