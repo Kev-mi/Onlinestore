@@ -146,7 +146,7 @@ class CustomerManager:
 
         discounted_products = []
         for product in products:
-            gui.cursor.execute("SELECT * FROM Discount WHERE discount_code = ?", (product[9],))
+            gui.cursor.execute("SELECT * FROM Discount WHERE discount_code = ?", (product[8],))
             discount = gui.cursor.fetchone()
             if discount and discount[4] < discount[3] < discount[5]:
                 discounted_products.append((product, discount[1]))
@@ -327,29 +327,29 @@ class CustomerManager:
             WHERE username = ? AND confirmed_order = FALSE AND placed_order = FALSE
             ORDER BY Shopping_list_id DESC
             LIMIT 1
-        ''', (current_user_name,))
-        active_shopping_list = cursor.fetchone()
+        ''', (self.current_user_name,))
+        active_shopping_list = gui.cursor.fetchone()
 
         if active_shopping_list is None:
             gui.cursor.execute("SELECT MAX(Shopping_list_id) FROM Shopping_list")
-            max_shopping_list_id = cursor.fetchone()[0] or 0
+            max_shopping_list_id = gui.cursor.fetchone()[0] or 0
             shopping_list_id = max_shopping_list_id + 1
 
             gui.cursor.execute('''
                 INSERT INTO Shopping_list (Shopping_list_id, username, total_cost, confirmed_order, placed_order)
                 VALUES (?, ?, 0, FALSE, FALSE)
-            ''', (shopping_list_id, current_user_name))
+            ''', (shopping_list_id, self.current_user_name))
         else:
             shopping_list_id = active_shopping_list[0]
 
-        discount_id = product[9]
+        discount_id = product[8]
 
         gui.cursor.execute(
             '''SELECT quantity FROM Shopping_list_item 
                WHERE product_code = ? AND Shopping_list_id = ? AND username = ? AND ordered = FALSE''',
-            (product_id, shopping_list_id, current_user_name)
+            (product_id, shopping_list_id, self.current_user_name)
         )
-        current_product_quantity = cursor.fetchone()
+        current_product_quantity = gui.cursor.fetchone()
 
         if current_product_quantity:
             new_quantity = current_product_quantity[0] + quantity_ordered
@@ -357,13 +357,13 @@ class CustomerManager:
                 '''UPDATE Shopping_list_item 
                    SET quantity = ? 
                    WHERE product_code = ? AND Shopping_list_id = ? AND username = ? AND ordered = FALSE''',
-                (new_quantity, product_id, shopping_list_id, current_user_name)
+                (new_quantity, product_id, shopping_list_id, self.current_user_name)
             )
         else:
             gui.cursor.execute(
                 '''INSERT INTO Shopping_list_item (Shopping_list_id, product_code, quantity, username, Discount_ID, ordered) 
                    VALUES (?, ?, ?, ?, ?, FALSE)''',
-                (shopping_list_id, product_id, quantity_ordered, current_user_name, discount_id)
+                (shopping_list_id, product_id, quantity_ordered, self.current_user_name, discount_id)
             )
 
         gui.cursor.execute(
@@ -374,6 +374,127 @@ class CustomerManager:
         )
 
         gui.conn.commit()
-
+        messagebox.showinfo("Success", "Item got added to order")
         customer_menu()
 
+    def customer_place_order(self, gui):
+
+        gui.cursor.execute(
+            "SELECT Shopping_list_id FROM Shopping_list WHERE username = ? AND placed_order = FALSE ORDER BY Shopping_list_id DESC LIMIT 1",
+            (self.current_user_name,))
+        active_shopping_list = gui.cursor.fetchone()
+
+        if active_shopping_list is None:
+            messagebox.showerror("Error", "No items in the shopping list to place an order.")
+            return
+
+        shopping_list_id = active_shopping_list[0]
+
+        gui.cursor.execute('SELECT * FROM Shopping_list_item WHERE Shopping_list_id = ? AND ordered = FALSE',
+                       (shopping_list_id,))
+
+        products = gui.cursor.fetchall()
+
+        if not products:
+            messagebox.showerror("Error", "No items in the shopping list to place an order.")
+            return
+
+        total_cost = 0
+
+        for product in products:
+            gui.cursor.execute('SELECT * FROM Product WHERE product_code = ?', (product[2],))
+            product_details = gui.cursor.fetchone()
+
+            discount_code = product_details[-1]
+
+            gui.cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (discount_code,))
+            discount = gui.cursor.fetchone()
+
+            discount_rate = 0
+            if discount is not None and discount[4] < discount[3] < discount[5]:
+                discount_rate = discount[1]
+
+            if product_details:
+                item_total_cost = product[3] * product_details[3]
+                discounted_cost = item_total_cost * ((100 - float(discount_rate)) / 100)
+                total_cost += discounted_cost
+
+        gui.cursor.execute('UPDATE Shopping_list SET total_cost = ?, placed_order = TRUE WHERE Shopping_list_id = ?',
+                       (total_cost, shopping_list_id))
+
+        gui.cursor.execute('UPDATE Shopping_list_item SET ordered = TRUE WHERE Shopping_list_id = ?', (shopping_list_id,))
+
+        gui.conn.commit()
+
+        # after placing the order, create a new shopping list for the next order
+        gui.cursor.execute("SELECT MAX(Shopping_list_id) FROM Shopping_list")
+        max_shopping_list_id = gui.cursor.fetchone()[0] or 0
+        new_shopping_list_id = max_shopping_list_id + 1
+
+        gui.cursor.execute('''
+            INSERT INTO Shopping_list (Shopping_list_id, username, total_cost, confirmed_order)
+            VALUES (?, ?, 0, FALSE)
+        ''', (new_shopping_list_id, self.current_user_name))
+
+        gui.conn.commit()
+
+        messagebox.showinfo("Order Status",
+                            f"Order placed successfully! Your total cost is {str(round(total_cost, 2))}")
+
+        customer_order_history_tab()
+
+    def select_shopping_list_customer(self, shopping_list_id, gui):
+        gui.cursor.execute('''SELECT * FROM Shopping_list WHERE Shopping_list_id = ?''', (shopping_list_id,))
+        shopping_list = gui.cursor.fetchone()
+
+        if shopping_list is None:
+            messagebox.showerror("Error", "No shopping list found with the given ID.")
+            return
+
+        user_response = messagebox.askyesno("Delete Confirmation", "Click Yes to delete, Click No to cancel deleting")
+        # if customer clicks on yes to delete
+        if user_response:
+            # deleting if admin hasn't confirmed yet
+            if not shopping_list[5]:
+                gui.cursor.execute('''SELECT product_code, quantity FROM Shopping_list_item WHERE Shopping_list_id = ?''',
+                               (shopping_list_id,))
+                items = gui.cursor.fetchall()
+
+                if items:
+                    for item in items:
+                        gui.cursor.execute('''
+                            UPDATE Product 
+                            SET quantity_in_stock = quantity_in_stock + ? 
+                            WHERE product_code = ?
+                        ''', (item[1], item[0]))
+
+                gui.cursor.execute('''DELETE FROM Shopping_list_item WHERE Shopping_list_id = ? AND ordered = TRUE''',
+                               (shopping_list_id,))
+                gui.cursor.execute('''DELETE FROM Shopping_list WHERE Shopping_list_id = ?''', (shopping_list_id,))
+                gui.conn.commit()
+
+                if shopping_list_id in order_history_buttons:
+                    order_history_buttons[shopping_list_id].destroy()
+                    del order_history_buttons[shopping_list_id]
+
+                customer_menu()
+            else:
+                messagebox.showerror("Error", "Order is already confirmed and can't be cancelled")
+                customer_menu()
+        else:
+            customer_menu()
+
+    def create_order_history_button(self, customer_tab_7, shopping_list_id, gui):
+        gui.cursor.execute('SELECT total_cost FROM Shopping_list WHERE Shopping_list_id = ?', (shopping_list_id,))
+        total_cost = gui.cursor.fetchone()[0]
+
+        order_history_frame = Frame(customer_tab_7)
+        order_history_frame.grid(row=len(order_history_buttons), column=0, columnspan=4, padx=5, pady=5)
+
+        btn = Button(order_history_frame,
+                     text=f"Shopping List Number: {shopping_list_id} Total Price: {round(total_cost, 2)} \n",
+                     command=lambda idx=shopping_list_id: select_shopping_list_customer(idx, gui),
+                     width=120)
+        btn.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+
+        order_history_buttons[shopping_list_id] = btn
