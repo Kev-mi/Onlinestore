@@ -11,6 +11,7 @@ def init_tables(cursor):
     cursor.execute('''DROP TABLE IF EXISTS Shopping_list''')
     cursor.execute('''DROP TABLE IF EXISTS Shopping_list_item''')
 
+    # User table that contains info if the user is a customer or admin
     cursor.execute('''
         CREATE TABLE User (
             user_id INTEGER PRIMARY KEY,
@@ -20,6 +21,7 @@ def init_tables(cursor):
         );
     ''')
 
+    # customer table that has user_id
     cursor.execute('''
         CREATE TABLE Customer_info (
             customer_id INTEGER PRIMARY KEY,
@@ -35,6 +37,7 @@ def init_tables(cursor):
         );
     ''')
 
+    # supplier table
     cursor.execute('''
         CREATE TABLE Supplier (
             supplier_id INTEGER PRIMARY KEY,
@@ -49,24 +52,25 @@ def init_tables(cursor):
         );
     ''')
 
+    # table for product that also has discount id if it's connected to a discount
     cursor.execute('''
-        CREATE TABLE Product (
-            product_code INTEGER PRIMARY KEY,
-            quantity_in_stock INTEGER CHECK(quantity_in_stock >= 0),
-            number_of_sales INTEGER CHECK(number_of_sales >= 0),
-            base_price REAL,
-            product_revenue REAL,
-            supplier_name VARCHAR(30),
-            product_name VARCHAR(30),
-            Shopping_list_id INTEGER,
-            maximum_orders_per_month INTEGER,
-            Discount_ID INTEGER,
-            FOREIGN KEY (Discount_ID) REFERENCES Discount(discount_code),
-            FOREIGN KEY (supplier_name) REFERENCES Supplier(supplier_name),
-            FOREIGN KEY (Shopping_list_id) REFERENCES Shopping_list(Shopping_list_id)
-        );
-    ''')
+            CREATE TABLE Product (
+                product_code INTEGER PRIMARY KEY,
+                quantity_in_stock INTEGER CHECK(quantity_in_stock >= 0),
+                number_of_sales INTEGER CHECK(number_of_sales >= 0),
+                base_price REAL,
+                product_revenue REAL,
+                supplier_name VARCHAR(30),
+                product_name VARCHAR(30),
+                maximum_orders_per_month INTEGER,
+                Discount_ID INTEGER,
+                FOREIGN KEY (Discount_ID) REFERENCES Discount(discount_code),
+                FOREIGN KEY (supplier_name) REFERENCES Supplier(supplier_name)
+            );
+        ''')
 
+    # table for shopping list that contains the username of the customer it's connected to
+    # if the order is place by the customer and if the order has been confirmed by admin
     cursor.execute('''
         CREATE TABLE Shopping_list (
             Shopping_list_id INTEGER PRIMARY KEY,
@@ -79,31 +83,36 @@ def init_tables(cursor):
         );
     ''')
 
+    # table for the ordered version of product
+    # it has quantity and shopping list id to know the amount in the shopping list and which shopping list it's in
     cursor.execute('''
-        CREATE TABLE Shopping_list_item (
-            Shopping_list_item_id INTEGER PRIMARY KEY,
-            Shopping_list_id INTEGER,
-            product_code INTEGER,
-            quantity INTEGER,
-            item_price REAL DEFAULT 0,
-            username VARCHAR(30),
-            Discount_ID INTEGER,
-            ordered BOOLEAN DEFAULT FALSE,
-            FOREIGN KEY (Shopping_list_id) REFERENCES Shopping_list(Shopping_list_id),
-            FOREIGN KEY (product_code) REFERENCES Product(product_code)
-        );
-    ''')
+            CREATE TABLE Shopping_list_item (
+                Shopping_list_item_id INTEGER PRIMARY KEY,
+                Shopping_list_id INTEGER,
+                product_code INTEGER,
+                quantity INTEGER,
+                item_price REAL DEFAULT 0,
+                username VARCHAR(30),
+                Discount_ID INTEGER,
+                ordered BOOLEAN DEFAULT FALSE,
+                FOREIGN KEY (Shopping_list_id) REFERENCES Shopping_list(Shopping_list_id),
+                FOREIGN KEY (product_code) REFERENCES Product(product_code)
+            );
+        ''')
 
     cursor.execute('''
         CREATE TABLE Discount (
         discount_code INTEGER PRIMARY KEY,
         discount_percentage double,
         discount_category varchar(40),
-        current_date DATE DEFAULT '{}',
         start_date DATE CHECK(start_date <= end_date),
-        end_date DATE
-        );
+        end_date DATE,
+        product_code int,
+        
+        FOREIGN KEY (product_code) REFERENCES Product(product_code)
+    );
     ''')
+
 
 
 # method that init admin by inserting admin as a user
