@@ -375,7 +375,6 @@ class CustomerManager:
 
         gui.conn.commit()
         messagebox.showinfo("Success", "Item got added to order")
-        customer_menu()
 
     def customer_place_order(self, gui):
 
@@ -431,6 +430,7 @@ class CustomerManager:
         max_shopping_list_id = gui.cursor.fetchone()[0] or 0
         new_shopping_list_id = max_shopping_list_id + 1
 
+        # here the new shopping list is being inserted
         gui.cursor.execute('''
             INSERT INTO Shopping_list (Shopping_list_id, username, total_cost, confirmed_order)
             VALUES (?, ?, 0, FALSE)
@@ -441,7 +441,20 @@ class CustomerManager:
         messagebox.showinfo("Order Status",
                             f"Order placed successfully! Your total cost is {str(round(total_cost, 2))}")
 
-        customer_order_history_tab()
+    def create_order_history_button(self, customer_tab_7, shopping_list_id, gui):
+        gui.cursor.execute('SELECT total_cost FROM Shopping_list WHERE Shopping_list_id = ?', (shopping_list_id,))
+        total_cost = gui.cursor.fetchone()[0]
+
+        order_history_frame = Frame(customer_tab_7)
+        order_history_frame.grid(row=len(gui.order_history_buttons), column=0, columnspan=4, padx=5, pady=5)
+
+        btn = Button(order_history_frame,
+                     text=f"Shopping List Number: {shopping_list_id} Total Price: {round(total_cost, 2)} \n",
+                     command=lambda idx=shopping_list_id: self.select_shopping_list_customer(idx, gui),
+                     width=120)
+        btn.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+
+        gui.order_history_buttons[shopping_list_id] = btn
 
     def select_shopping_list_customer(self, shopping_list_id, gui):
         gui.cursor.execute('''SELECT * FROM Shopping_list WHERE Shopping_list_id = ?''', (shopping_list_id,))
@@ -449,17 +462,17 @@ class CustomerManager:
 
         if shopping_list is None:
             messagebox.showerror("Error", "No shopping list found with the given ID.")
-            return
+            return None
 
         user_response = messagebox.askyesno("Delete Confirmation", "Click Yes to delete, Click No to cancel deleting")
         # if customer clicks on yes to delete
         if user_response:
             # deleting if admin hasn't confirmed yet
-            if not shopping_list[5]:
+            # checking if shopping list has been confirmed by admin, 0 = false and 1 = true
+            if shopping_list[3] == 0:
                 gui.cursor.execute('''SELECT product_code, quantity FROM Shopping_list_item WHERE Shopping_list_id = ?''',
                                (shopping_list_id,))
                 items = gui.cursor.fetchall()
-
                 if items:
                     for item in items:
                         gui.cursor.execute('''
@@ -473,28 +486,13 @@ class CustomerManager:
                 gui.cursor.execute('''DELETE FROM Shopping_list WHERE Shopping_list_id = ?''', (shopping_list_id,))
                 gui.conn.commit()
 
-                if shopping_list_id in order_history_buttons:
-                    order_history_buttons[shopping_list_id].destroy()
-                    del order_history_buttons[shopping_list_id]
+                if shopping_list_id in gui.order_history_buttons:
+                    gui.order_history_buttons[shopping_list_id].destroy()
+                    del gui.order_history_buttons[shopping_list_id]
 
-                customer_menu()
+                return None
             else:
                 messagebox.showerror("Error", "Order is already confirmed and can't be cancelled")
-                customer_menu()
+                return None
         else:
-            customer_menu()
-
-    def create_order_history_button(self, customer_tab_7, shopping_list_id, gui):
-        gui.cursor.execute('SELECT total_cost FROM Shopping_list WHERE Shopping_list_id = ?', (shopping_list_id,))
-        total_cost = gui.cursor.fetchone()[0]
-
-        order_history_frame = Frame(customer_tab_7)
-        order_history_frame.grid(row=len(order_history_buttons), column=0, columnspan=4, padx=5, pady=5)
-
-        btn = Button(order_history_frame,
-                     text=f"Shopping List Number: {shopping_list_id} Total Price: {round(total_cost, 2)} \n",
-                     command=lambda idx=shopping_list_id: select_shopping_list_customer(idx, gui),
-                     width=120)
-        btn.grid(row=0, column=0, padx=5, pady=5, sticky="w")
-
-        order_history_buttons[shopping_list_id] = btn
+            return None
