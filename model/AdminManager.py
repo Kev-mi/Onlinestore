@@ -1,6 +1,7 @@
 import view.CustomerMenu as CustomerMenu
 from tkinter import ttk, messagebox, simpledialog, filedialog, Button, Text, Scrollbar, Frame, TOP, END, VERTICAL, Entry, Label
 import sqlite3
+import re
 
 class AdminManager:
 
@@ -174,6 +175,12 @@ class AdminManager:
 
     def get_name_discount_input(self):
         return self.name_discount_input
+
+    def set_discount_input(self, discount):
+        self.discount_input = discount
+
+    def get_discount_input(self):
+        return self.discount_input
 
     def set_lower_date_input(self, lower_input_date):
         self.lower_date_input = lower_input_date
@@ -519,7 +526,7 @@ class AdminManager:
         except sqlite3.IntegrityError:
             print("invalid info inputted")
 
-    def validate_discount_add(self):
+    def validate_discount_add(self, gui):
 
         discount_id = self.id_discount_input
         discount_name = self.name_discount_input
@@ -560,6 +567,7 @@ class AdminManager:
         # using regex to check if inputted date is in the correct format
         date_pattern = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 
+        #checking if the input is in the correct format
         if not date_pattern.match(lower_date):
             messagebox.showerror("Error", "Lower date must be in YYYY-MM-DD format.")
             return False
@@ -574,7 +582,9 @@ class AdminManager:
             messagebox.showerror("Error", "Upper date must be equal to or greater than lower date.")
             return False
 
-        if product_id_discount != "":
+        # checking if product id input is correct
+        print(product_id_discount)
+        if product_id_discount != "" and product_id_discount != None:
             if len(product_id_discount) > 8:
                 messagebox.showerror("Error", "Product ID cannot be longer than 8 characters.")
                 return False
@@ -591,7 +601,7 @@ class AdminManager:
 
         return True
 
-    def admin_add_discount(gui):
+    def admin_add_discount(self, gui):
 
         id_discount = self.id_discount_input
         name_discount = self.name_discount_input
@@ -603,16 +613,17 @@ class AdminManager:
         try:
             if product_id_discount != "":
                 # insert the discount
-                cursor.execute('''
-                    INSERT INTO Discount (discount_code, discount_category, discount_percentage, start_date, end_date, product_code)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (id_discount, name_discount, discount_percentage, lower_date, upper_date, product_id_discount))
+                gui.cursor.execute('''
+                           INSERT INTO Discount (discount_code, discount_category, discount_percentage, start_date, end_date, product_code)
+                           VALUES (?, ?, ?, ?, ?, ?)
+                       ''', (
+                id_discount, name_discount, discount_percentage, lower_date, upper_date, product_id_discount))
 
-                cursor.execute('''
-                        UPDATE Product
-                        SET Discount_ID = ?
-                        WHERE product_code = ?
-                    ''', (id_discount, product_id_discount))
+                gui.cursor.execute('''
+                               UPDATE Product
+                               SET Discount_ID = ?
+                               WHERE product_code = ?
+                           ''', (id_discount, product_id_discount))
 
                 gui.conn.commit()
 
@@ -621,19 +632,66 @@ class AdminManager:
                 gui.conn.commit()
             else:
                 gui.cursor.execute('''
-                              INSERT INTO Discount (discount_code, discount_category, discount_percentage, start_date, end_date)
-                              VALUES (?, ?, ?, ?, ?)
-                          ''', (
+                                INSERT INTO Discount (discount_code, discount_category, discount_percentage, start_date, end_date)
+                                VALUES (?, ?, ?, ?, ?)
+                                     ''', (
                     id_discount, name_discount, discount_percentage, lower_date, upper_date))
 
                 messagebox.showinfo("Success", "Discount added!")
 
                 gui.conn.commit()
 
-
         except sqlite3.IntegrityError:
             print("invalid info inputted")
 
+    def select_discount(self, discount_id):
+        self.selected_discount_id = discount_id
+        messagebox.showinfo("Success", "Discount got selected!")
 
+    def select_product(self, product_id):
+        self.selected_product_id = product_id
+        messagebox.showinfo("Success", "Product got selected!")
 
+    def remove_discount(self, gui):
+        # checking if the user has selected a product and a discount to delete from the product
+        if self.selected_discount_id == None:
+            messagebox.showinfo("Failure", "No Discount selected!")
+
+        elif self.selected_product_id == None:
+            messagebox.showinfo("Failure", "No Product selected!")
+
+        else:
+            gui.cursor.execute("UPDATE Product SET Discount_ID = NULL WHERE product_code = ?", (self.selected_product_id,))
+            messagebox.showinfo("Success", "Discount removed from product!")
+
+            gui.conn.commit()
+
+    def assign_selected_discount_to_product(self, gui):
+        # checking if the user has selected a product and a discount to assign to the product
+        if self.selected_discount_id == None:
+            messagebox.showinfo("Failure", "No Discount selected!")
+
+        elif self.selected_product_id == None:
+            messagebox.showinfo("Failure", "No Product selected!")
+
+        else:
+            gui.cursor.execute("UPDATE Product SET Discount_ID = ? WHERE product_code = ?",
+                               (self.selected_discount_id, self.selected_product_id))
+            messagebox.showinfo("Success", "Discount assigned to product!")
+
+            gui.conn.commit()
+
+    def select_shopping_list_admin(self, shopping_list_id, gui):
+        gui.cursor.execute('''SELECT * FROM Shopping_list WHERE Shopping_list_id = ?''', (shopping_list_id,))
+        shopping_list = gui.cursor.fetchone()
+
+        user_response = messagebox.askyesno("Confirmation", "Yes to Confirm order, No to cancel confirmation")
+
+        if user_response:
+            if not shopping_list[5]:
+                gui.cursor.execute('''UPDATE Shopping_list SET confirmed_order  = ? WHERE Shopping_list_id = ?''',
+                               (True, shopping_list_id))
+                gui.conn.commit()
+            else:
+                messagebox.showerror("Error", "Order is already confirmed!")
 
