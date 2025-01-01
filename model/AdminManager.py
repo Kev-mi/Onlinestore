@@ -2,6 +2,8 @@ import view.CustomerMenu as CustomerMenu
 from tkinter import ttk, messagebox, simpledialog, filedialog, Button, Text, Scrollbar, Frame, TOP, END, VERTICAL, Entry, Label
 import sqlite3
 import re
+from datetime import datetime
+
 
 class AdminManager:
 
@@ -307,6 +309,16 @@ class AdminManager:
             return False
 
         return True
+
+    def validate_date_input(self, date_input):
+        try:
+            datetime.strptime(date_input, "%Y-%m-%d")
+            messagebox.showinfo("Date changed", "Date changed to the new input")
+            return True
+        except ValueError:
+            messagebox.showinfo("Error", f"Invalid date input")
+            return False
+
 
     def validate_inputs_product(self):
 
@@ -618,16 +630,16 @@ class AdminManager:
             if product_id_discount != "":
                 # insert the discount
                 gui.cursor.execute('''
-                           INSERT INTO Discount (discount_code, discount_category, discount_percentage, start_date, end_date, product_code)
-                           VALUES (?, ?, ?, ?, ?, ?)
+                           INSERT INTO Discount (discount_code, discount_category, discount_percentage, start_date, end_date)
+                           VALUES (?, ?, ?, ?, ?)
                        ''', (
-                id_discount, name_discount, discount_percentage, lower_date, upper_date, product_id_discount))
+                id_discount, name_discount, discount_percentage, lower_date, upper_date))
 
                 gui.cursor.execute('''
-                               UPDATE Product
-                               SET Discount_ID = ?
-                               WHERE product_code = ?
-                           ''', (id_discount, product_id_discount))
+                                    INSERT INTO Discount_item (discount_code, product_code)
+                                    VALUES (?, ?)
+                                    ''', (
+                id_discount, product_id_discount))
 
                 gui.conn.commit()
 
