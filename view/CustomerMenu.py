@@ -343,7 +343,7 @@ def customer_current_order_tab(customer_tab_6, gui, customer_manager):
 
         discount_code = product_details[-1]
 
-        gui.cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (discount_code,))
+        gui.cursor.execute('''SELECT * FROM Discount_item WHERE discount_code = ? AND product_code = ?''', (discount_code, product[2]))
         discount = gui.cursor.fetchone()
 
         if discount is not None:
