@@ -346,8 +346,8 @@ class CustomerManager:
 
         gui.cursor.execute(
             '''SELECT quantity FROM Shopping_list_item 
-               WHERE product_code = ? AND Shopping_list_id = ? AND username = ? AND ordered = FALSE''',
-            (product_id, shopping_list_id, self.current_user_name)
+               WHERE product_code = ? AND Shopping_list_id = ? AND ordered = FALSE''',
+            (product_id, shopping_list_id)
         )
         current_product_quantity = gui.cursor.fetchone()
 
@@ -356,14 +356,14 @@ class CustomerManager:
             gui.cursor.execute(
                 '''UPDATE Shopping_list_item 
                    SET quantity = ? 
-                   WHERE product_code = ? AND Shopping_list_id = ? AND username = ? AND ordered = FALSE''',
-                (new_quantity, product_id, shopping_list_id, self.current_user_name)
+                   WHERE product_code = ? AND Shopping_list_id = ? AND ordered = FALSE''',
+                (new_quantity, product_id, shopping_list_id)
             )
         else:
             gui.cursor.execute(
                 '''INSERT INTO Shopping_list_item (Shopping_list_id, product_code, quantity, username, Discount_ID, ordered) 
                    VALUES (?, ?, ?, ?, ?, FALSE)''',
-                (shopping_list_id, product_id, quantity_ordered, self.current_user_name, discount_id)
+                (shopping_list_id, product_id, quantity_ordered, discount_id)
             )
 
         gui.cursor.execute(
