@@ -10,6 +10,7 @@ def init_tables(cursor):
     cursor.execute('''DROP TABLE IF EXISTS Customer_info''')
     cursor.execute('''DROP TABLE IF EXISTS Shopping_list''')
     cursor.execute('''DROP TABLE IF EXISTS Shopping_list_item''')
+    cursor.execute('''DROP TABLE IF EXISTS Discount_item''')
 
     # User table that contains info if the user is a customer or admin
     cursor.execute('''
@@ -79,40 +80,48 @@ def init_tables(cursor):
             confirmed_order BOOLEAN DEFAULT FALSE,
             total_cost REAL,
             placed_order BOOLEAN DEFAULT FALSE,
+            
             FOREIGN KEY (username) REFERENCES User(username)
         );
     ''')
 
     # table for the ordered version of product
-    # it has quantity and shopping list id to know the amount in the shopping list and which shopping list it's in
+    # it has quantity, shopping list id to know the amount in the shopping list and which shopping list it's in
+    # and of course product_code, so it has 2 primary keys that uniquely identifies which product it is and which shopping_list it's in
     cursor.execute('''
             CREATE TABLE Shopping_list_item (
-                Shopping_list_item_id INTEGER PRIMARY KEY,
                 Shopping_list_id INTEGER,
                 product_code INTEGER,
                 quantity INTEGER,
                 item_price REAL DEFAULT 0,
-                username VARCHAR(30),
-                Discount_ID INTEGER,
                 ordered BOOLEAN DEFAULT FALSE,
+                PRIMARY KEY (Shopping_list_id, product_code),
                 FOREIGN KEY (Shopping_list_id) REFERENCES Shopping_list(Shopping_list_id),
                 FOREIGN KEY (product_code) REFERENCES Product(product_code)
             );
         ''')
 
     cursor.execute('''
-        CREATE TABLE Discount (
-        discount_code INTEGER PRIMARY KEY,
-        discount_percentage double,
-        discount_category varchar(40),
-        start_date DATE CHECK(start_date <= end_date),
-        end_date DATE,
-        product_code int,
-        
-        FOREIGN KEY (product_code) REFERENCES Product(product_code)
-    );
-    ''')
+            CREATE TABLE Discount (
+                discount_code INTEGER PRIMARY KEY,
+                discount_percentage DOUBLE,
+                discount_category varchar(40),
+                start_date DATE CHECK(start_date <= end_date),
+                end_date DATE
+            );
+        ''')
 
+    # table that applies discount to product so that one discount can be applied to multiple products
+    # it has 2 primary keys that uniquely identifies which discount is connected to which product
+    cursor.execute('''
+        CREATE TABLE Discount_item (
+            discount_code INTEGER,
+            product_code INTEGER,
+            PRIMARY KEY (product_code, discount_code),
+            FOREIGN KEY (product_code) REFERENCES Product(product_code),
+            FOREIGN KEY (discount_code) REFERENCES Discount(discount_code)
+        );
+    ''')
 
 
 # method that init admin by inserting admin as a user
