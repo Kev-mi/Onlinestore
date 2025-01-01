@@ -46,6 +46,7 @@ def admin_menu(gui, admin_manager):
             5: lambda: admin_add_discount_tab(gui.tabs.nametowidget(gui.tabs.select()),gui, admin_manager),
             6: lambda: admin_assign_discount(gui.tabs.nametowidget(gui.tabs.select()), gui, admin_manager),
             7: lambda: admin_main_menu(gui.tabs.nametowidget(gui.tabs.select()), gui),
+            8: lambda: admin_set_date(gui.tabs.nametowidget(gui.tabs.select()), admin_manager,gui),
         }
 
         # this is because get just gets the number but doesn't call the switch_case dictionairy so if func lines are needed to call the dictionairy
@@ -283,7 +284,6 @@ def admin_add_discount_tab(admin_tab_6, gui, admin_manager):
                                                                                     upper_date_input.get(),
                                                                                     product_code_input.get()))
 
-
     submit_discount_label.grid(row=6, column=1, padx=10, pady=10, sticky="w")
 
     discount_id_label_2 = Label(admin_tab_6, text="Discount ID:")
@@ -405,6 +405,30 @@ def admin_order_history_tab(admin_tab_4, gui, admin_manager):
                 btn.pack(side=TOP, padx=5, pady=5, fill="none", expand=False)
 
 
+def admin_set_date(admin_tab_9, admin_manager, gui):
+    set_date = Label(admin_tab_9, text="YYYY-MM-DD Date:")
+    set_date.grid(row=0, column=0, padx=10, pady=10, sticky="w")
+    set_date_input = Entry(admin_tab_9, width=30)
+    set_date_input.grid(row=0, column=1, padx=10, pady=10)
+
+    submit_date_label = Button(admin_tab_9, text="Set new date", width=40,
+                                       command=lambda: submit_date_setter(admin_manager, set_date_input.get()))
+
+    submit_date_label.grid(row=6, column=1, padx=10, pady=10, sticky="w")
+
+    current_date = admin_manager.get_current_date()
+
+    current_date = ttk.Label(admin_tab_9, text="current date YYYY-MM-DD: " + current_date)
+    current_date.grid(row=0, column=2, padx=10, pady=10, sticky="w")
+
+
+def submit_date_setter(admin_manager, input_date):
+    valid_input = admin_manager.validate_date_input(input_date)
+    if valid_input:
+        admin_manager.set_current_date(input_date)
+
+
+
 def admin_add_product_tab(admin_tab_5, gui, admin_manager):
 
     id_label = Label(admin_tab_5, text="Id:")
@@ -506,7 +530,7 @@ def admin_assign_discount(admin_tab_7, gui, admin_manager):
     discount_frame.grid(row=2, column=0, columnspan=4, padx=10, pady=10)
 
     # getting all the discounts
-    gui.cursor.execute('''SELECT product_code, discount_code FROM Discount''')
+    gui.cursor.execute('''SELECT product_code, discount_code FROM Discount_item''')
     discounts = gui.cursor.fetchall()
 
     # assigning the discounts
@@ -514,7 +538,7 @@ def admin_assign_discount(admin_tab_7, gui, admin_manager):
         gui.cursor.execute("UPDATE Product SET Discount_ID = ? WHERE product_code = ?", (discount_code, product_code))
 
     # updating
-    gui.conn.commit()
+    #gui.conn.commit()
 
     gui.cursor.execute('''SELECT * FROM Discount''')
     discounts = gui.cursor.fetchall()
@@ -526,7 +550,7 @@ def admin_assign_discount(admin_tab_7, gui, admin_manager):
     # inserting buttons for each discount
     for discount in discounts:
         btn = Button(discount_frame,
-                     text=f"'Discount ID' {discount[0]} 'Discount category' {discount[2]} 'Discount Percentage' {discount[1]}% 'From' {discount[4]} 'To' {discount[5]}",
+                     text=f"'Discount ID' {discount[0]} 'Discount category' {discount[2]} 'Discount Percentage' {discount[1]}% 'From' {discount[3]} 'To' {discount[4]}",
                      command=lambda idx=discount[0]: admin_manager.select_discount(idx), width=80)
         btn.pack(side=TOP, padx=5, pady=5, fill="none", expand=False)
 
@@ -534,6 +558,7 @@ def admin_assign_discount(admin_tab_7, gui, admin_manager):
     # creating a frame for product buttons
     product_frame = Frame(admin_tab_7)
     product_frame.grid(row=3, column=0, columnspan=4, padx=10, pady=10)
+
 
     # displaying all the discounts
     def display_all_discounts_2(gui):
@@ -550,7 +575,7 @@ def admin_assign_discount(admin_tab_7, gui, admin_manager):
 
             if product[8] is not None:
                 gui.cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (product[8],))
-                discount = cursor.fetchone()
+                discount = gui.cursor.fetchone()
                 if discount[4] < discount[3] < discount[5]:
                     discount_info = f"Discount ID: {discount[0]}  Discount ID: {discount[2]}  Product Price: {float(product[3])*((100-float(discount[1]))/100)}  Discount Percentage:  {discount[1]}%  From:  {discount[4]}  To:  {discount[5]}"
                 else:
@@ -593,6 +618,7 @@ def admin_menu_tabs_init(gui, admin_manager):
     admin_tab_6 = ttk.Frame(gui.tabs)
     admin_tab_7 = ttk.Frame(gui.tabs)
     admin_tab_8 = ttk.Frame(gui.tabs)
+    admin_tab_9 = ttk.Frame(gui.tabs)
 
     gui.add_tab(admin_tab_1, text="Show Suppliers")
     gui.add_tab(admin_tab_2, text="Product Search")
@@ -602,6 +628,7 @@ def admin_menu_tabs_init(gui, admin_manager):
     gui.add_tab(admin_tab_6, text="Add Discounts")
     gui.add_tab(admin_tab_7, text="Assign Discounts")
     gui.add_tab(admin_tab_8, text="Main Menu")
+    gui.add_tab(admin_tab_9, text="Set Date")
 
     admin_menu(gui, admin_manager)
 
