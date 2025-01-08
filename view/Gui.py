@@ -19,6 +19,14 @@ class Gui:
 
         self.order_history_buttons = {}
 
+        self._current_date = None
+
+    def get_current_date(self):
+        return self._current_date
+
+    def set_current_date(self, date):
+        self._current_date = date
+
     # method that adds a tab
     def add_tab(self, tab, text):
         self.tabs.add(tab, text=text)
