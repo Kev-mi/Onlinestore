@@ -24,7 +24,7 @@ if __name__ == '__main__':
     customer_manager = CustomerManager()
     admin_manager = AdminManager()
 
-    admin_manager.set_current_date(datetime.date.today().strftime("%Y-%m-%d"))
+    gui.set_current_date(datetime.date.today().strftime("%Y-%m-%d"))
 
     def switch_to_customer_menu():
         CustomerMenu.customer_menu_tabs_init(gui, customer_manager)
