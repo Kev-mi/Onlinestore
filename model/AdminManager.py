@@ -43,14 +43,6 @@ class AdminManager:
         self.selected_product_id = None
         self.selected_discount_id = None
 
-        self._current_date = None
-
-    def get_current_date(self):
-        return self._current_date
-
-    def set_current_date(self, date):
-        self._current_date = date
-
     def get_product_id_search_input(self):
         self.product_id_search_input
 
@@ -78,8 +70,8 @@ class AdminManager:
     def get_product_code_input_2(self):
         return self.product_code_input_2
 
-    def set_product_code_input_2(self, product_code):
-        self.product_code_input_2 = product_code
+    def set_product_code_input_2(self, product_code_2):
+        self.product_code_input_2 = product_code_2
 
     def get_product_name_input(self):
         return self.product_name_input
@@ -116,7 +108,6 @@ class AdminManager:
 
     def set_product_quantity_input(self, product_quantity_input):
         self.product_quantity_input = product_quantity_input
-
 
     def get_product_id_input_2(self):
         return self.product_id_input_2
@@ -196,8 +187,8 @@ class AdminManager:
     def get_upper_date_input(self):
         return self.upper_date_input
 
-    def set_product_code_input(self, prouct_code):
-        self.product_code = prouct_code
+    def set_product_code_input(self, prouct_code_input):
+        self.product_code_input = prouct_code_input
 
     def get_product_code_input(self):
         return self.product_code_input
@@ -207,6 +198,22 @@ class AdminManager:
 
     def get_discount_id_2(self):
         return self.discount_id_2
+
+    def get_discount_rate_current_order(self, gui, discount_id):
+
+        gui.cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (discount_id,))
+
+        discount = gui.cursor.fetchone()
+
+        if discount != None:
+            if discount[3] < gui.get_current_date() < discount[4]:
+                discount_rate = discount[1]
+            else:
+                discount_rate = 0
+        else:
+            discount_rate = 0
+
+        return discount_rate
 
     def validate_search_info(self):
         product_id = self.product_id_search_input
@@ -319,6 +326,23 @@ class AdminManager:
             messagebox.showinfo("Error", f"Invalid date input")
             return False
 
+    def validate_inputs_discount_to_remove(self):
+
+        discount_id_to_remove = self.discount_id_2
+
+        if discount_id_to_remove == None:
+            messagebox.showerror("Error", "All fields are required to be filled.")
+            return False
+
+        if len(discount_id_to_remove) > 8:
+            messagebox.showerror("Error", "Discount ID cannot be longer than 8 characters.")
+            return False
+
+        if not discount_id_to_remove.isdigit():
+            messagebox.showerror("Error", "Discount ID number must be a number")
+            return False
+
+        return True
 
     def validate_inputs_product(self):
 
@@ -402,7 +426,7 @@ class AdminManager:
         except sqlite3.IntegrityError:
             print("invalid info inputted")
 
-    def validate_product_quantity_edit(self, gui):
+    def validate_product_quantity_edit(self):
 
         product_quantity = self.product_quantity_input_2
         product_id = self.product_id_input_2
@@ -429,19 +453,9 @@ class AdminManager:
             messagebox.showerror("Error", "Quantity must be a valid integer")
             return False
 
-        # getting current quantity from product id
-        gui.cursor.execute('''SELECT quantity_in_stock FROM Product WHERE product_code = ?''', (product_id,))
-        # storing it
-        current_quantity = gui.cursor.fetchone()[0]
-
-        # checking if it doesn't cause negative product quantity
-        if current_quantity + int(product_quantity) < 0:
-            return False
-
         return True
 
     def admin_edit_quantity_product(self,gui):
-        print("inside quantity product")
         quantity = self.product_quantity_input_2
         id = self.product_id_input_2
         # getting current quantity by using product id
@@ -635,17 +649,29 @@ class AdminManager:
                        ''', (
                 id_discount, name_discount, discount_percentage, lower_date, upper_date))
 
+                # checking if the product already has an discount id attached to it
                 gui.cursor.execute('''
-                                    INSERT INTO Discount_item (discount_code, product_code)
-                                    VALUES (?, ?)
-                                    ''', (
-                id_discount, product_id_discount))
+                                SELECT Discount_ID FROM Product WHERE product_code = ?
+                            ''', (product_id_discount,))
+                existing_discount = gui.cursor.fetchone()
+
+                if existing_discount and existing_discount[0] is not None:
+                    # Product already has a discount; update it with the new one
+                    gui.cursor.execute('''
+                                    UPDATE Product SET Discount_ID = ? WHERE product_code = ?
+                                ''', (id_discount, product_id_discount))
+                    messagebox.showinfo("Success", "Discount replaced with the new discount!")
+
+                else:
+                    # Assigning the new discount to the product
+                    gui.cursor.execute('''UPDATE Product SET Discount_ID = ? WHERE product_code = ?
+                                       ''', (id_discount, product_id_discount))
+                    messagebox.showinfo("Success", "Discount added to product!")
 
                 gui.conn.commit()
 
                 messagebox.showinfo("Success", "Discount added!")
 
-                gui.conn.commit()
             else:
                 gui.cursor.execute('''
                                 INSERT INTO Discount (discount_code, discount_category, discount_percentage, start_date, end_date)
@@ -677,6 +703,11 @@ class AdminManager:
             messagebox.showinfo("Failure", "No Product selected!")
 
         else:
+
+            gui.cursor.execute('''SELECT Discount_ID FROM Product WHERE product_code = ?
+                               ''', (product_id_discount,))
+            existing_discount = gui.cursor.fetchone()
+
             gui.cursor.execute("UPDATE Product SET Discount_ID = NULL WHERE product_code = ?", (self.selected_product_id,))
             messagebox.showinfo("Success", "Discount removed from product!")
 
@@ -690,12 +721,26 @@ class AdminManager:
         elif self.selected_product_id == None:
             messagebox.showinfo("Failure", "No Product selected!")
 
-        else:
-            gui.cursor.execute("UPDATE Product SET Discount_ID = ? WHERE product_code = ?",
-                               (self.selected_discount_id, self.selected_product_id))
-            messagebox.showinfo("Success", "Discount assigned to product!")
 
-            gui.conn.commit()
+
+        else:
+
+            gui.cursor.execute('''SELECT Discount_ID FROM Product WHERE product_code = ?
+                               ''', (self.selected_discount_id,))
+            existing_discount = gui.cursor.fetchone()
+
+            if existing_discount and existing_discount[0] is not None:
+                # Product already has a discount; update it with the new one
+                gui.cursor.execute("UPDATE Product SET Discount_ID = ? WHERE product_code = ?", (self.selected_discount_id, self.selected_product_id))
+                messagebox.showinfo("Success", "Discount replaced with the new discount!")
+
+                gui.conn.commit()
+            else:
+                gui.cursor.execute("UPDATE Product SET Discount_ID = ? WHERE product_code = ?",
+                                   (self.selected_discount_id, self.selected_product_id))
+                messagebox.showinfo("Success", "Discount assigned to product!")
+
+                gui.conn.commit()
 
     def select_shopping_list_admin(self, shopping_list_id, gui):
         gui.cursor.execute('''SELECT * FROM Shopping_list WHERE Shopping_list_id = ?''', (shopping_list_id,))
@@ -704,8 +749,8 @@ class AdminManager:
         user_response = messagebox.askyesno("Confirmation", "Yes to Confirm order, No to cancel confirmation")
 
         if user_response:
-            if not shopping_list[5]:
-                gui.cursor.execute('''UPDATE Shopping_list SET confirmed_order  = ? WHERE Shopping_list_id = ?''',
+            if shopping_list[5] == 1:
+                gui.cursor.execute('''UPDATE Shopping_list SET confirmed_order = ? WHERE Shopping_list_id = ?''',
                                (True, shopping_list_id))
                 gui.conn.commit()
             else:
