@@ -148,10 +148,43 @@ class CustomerManager:
         for product in products:
             gui.cursor.execute("SELECT * FROM Discount WHERE discount_code = ?", (product[8],))
             discount = gui.cursor.fetchone()
-            if discount and discount[4] < discount[3] < discount[5]:
+            if discount and discount[3] < gui.get_current_date() < discount[4]:
                 discounted_products.append((product, discount[1]))
 
         return discounted_products
+
+    def get_discount_rate(self, gui, product):
+
+        gui.cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (product[8],))
+
+        discount = gui.cursor.fetchone()
+
+        if discount != None:
+            if discount[3] < gui.get_current_date() < discount[4]:
+                discount_rate = discount[1]
+            else:
+                discount_rate = 0
+        else:
+            discount_rate = 0
+
+        return discount_rate
+
+
+    def get_discount_rate_current_order(self, gui, discount_id):
+
+        gui.cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (discount_id,))
+
+        discount = gui.cursor.fetchone()
+
+        if discount != None:
+            if discount[3] < gui.get_current_date() < discount[4]:
+                discount_rate = discount[1]
+            else:
+                discount_rate = 0
+        else:
+            discount_rate = 0
+
+        return discount_rate
 
     def create_customer(self, gui):
 
@@ -361,9 +394,9 @@ class CustomerManager:
             )
         else:
             gui.cursor.execute(
-                '''INSERT INTO Shopping_list_item (Shopping_list_id, product_code, quantity, username, Discount_ID, ordered) 
-                   VALUES (?, ?, ?, ?, ?, FALSE)''',
-                (shopping_list_id, product_id, quantity_ordered, discount_id)
+                '''INSERT INTO Shopping_list_item (Shopping_list_id, product_code, quantity, ordered) 
+                   VALUES (?, ?, ?, FALSE)''',
+                (shopping_list_id, product_id, quantity_ordered)
             )
 
         gui.cursor.execute(
@@ -377,7 +410,7 @@ class CustomerManager:
         messagebox.showinfo("Success", "Item got added to order")
 
     def customer_place_order(self, gui):
-
+        # gets the shopping list from the logged in customer
         gui.cursor.execute(
             "SELECT Shopping_list_id FROM Shopping_list WHERE username = ? AND placed_order = FALSE ORDER BY Shopping_list_id DESC LIMIT 1",
             (self.current_user_name,))
@@ -389,9 +422,13 @@ class CustomerManager:
 
         shopping_list_id = active_shopping_list[0]
 
-        gui.cursor.execute('SELECT * FROM Shopping_list_item WHERE Shopping_list_id = ? AND ordered = FALSE',
-                       (shopping_list_id,))
-
+        # gets all the products in the shopping list with their details and discounts
+        gui.cursor.execute('''
+            SELECT sli.product_code, sli.quantity, p.product_name, p.base_price, p.discount_id
+            FROM Shopping_list_item sli
+            JOIN Product p ON sli.product_code = p.product_code
+            WHERE sli.Shopping_list_id = ? AND sli.ordered = FALSE
+        ''', (shopping_list_id,))
         products = gui.cursor.fetchall()
 
         if not products:
@@ -400,41 +437,38 @@ class CustomerManager:
 
         total_cost = 0
 
+        # calculates the cost
         for product in products:
-            gui.cursor.execute('SELECT * FROM Product WHERE product_code = ?', (product[2],))
-            product_details = gui.cursor.fetchone()
+            product_code, quantity, product_name, base_price, discount_id = product
 
-            discount_code = product_details[-1]
+            # getting the discount rate
+            discount_rate = self.get_discount_rate_current_order(gui, discount_id)
 
-            gui.cursor.execute('''SELECT * FROM Discount WHERE discount_code = ?''', (discount_code,))
-            discount = gui.cursor.fetchone()
+            item_total_cost = quantity * base_price
+            discounted_cost = item_total_cost * ((100 - discount_rate) / 100)
+            total_cost += discounted_cost
 
-            discount_rate = 0
-            if discount is not None and discount[4] < discount[3] < discount[5]:
-                discount_rate = discount[1]
+        # sets the cost and places the order
+        gui.cursor.execute('''
+            UPDATE Shopping_list
+            SET total_cost = ?, placed_order = TRUE
+            WHERE Shopping_list_id = ?
+        ''', (total_cost, shopping_list_id))
 
-            if product_details:
-                item_total_cost = product[3] * product_details[3]
-                discounted_cost = item_total_cost * ((100 - float(discount_rate)) / 100)
-                total_cost += discounted_cost
-
-        gui.cursor.execute('UPDATE Shopping_list SET total_cost = ?, placed_order = TRUE WHERE Shopping_list_id = ?',
-                       (total_cost, shopping_list_id))
-
-        gui.cursor.execute('UPDATE Shopping_list_item SET ordered = TRUE WHERE Shopping_list_id = ?', (shopping_list_id,))
+        # sets the items as ordered
+        gui.cursor.execute('''
+            UPDATE Shopping_list_item
+            SET ordered = TRUE
+            WHERE Shopping_list_id = ?
+        ''', (shopping_list_id,))
 
         gui.conn.commit()
 
-        # after placing the order, create a new shopping list for the next order
-        gui.cursor.execute("SELECT MAX(Shopping_list_id) FROM Shopping_list")
-        max_shopping_list_id = gui.cursor.fetchone()[0] or 0
-        new_shopping_list_id = max_shopping_list_id + 1
-
-        # here the new shopping list is being inserted
+        # creates a new shopping list for the next order
         gui.cursor.execute('''
-            INSERT INTO Shopping_list (Shopping_list_id, username, total_cost, confirmed_order)
-            VALUES (?, ?, 0, FALSE)
-        ''', (new_shopping_list_id, self.current_user_name))
+            INSERT INTO Shopping_list (username, total_cost, confirmed_order)
+            VALUES (?, 0, FALSE)
+        ''', (self.current_user_name,))
 
         gui.conn.commit()
 
@@ -442,8 +476,26 @@ class CustomerManager:
                             f"Order placed successfully! Your total cost is {str(round(total_cost, 2))}")
 
     def create_order_history_button(self, customer_tab_7, shopping_list_id, gui):
-        gui.cursor.execute('SELECT total_cost FROM Shopping_list WHERE Shopping_list_id = ?', (shopping_list_id,))
-        total_cost = gui.cursor.fetchone()[0]
+        # query for items in shopping_list with their discounts
+        gui.cursor.execute('''
+            SELECT sli.product_code, sli.quantity, p.product_name, p.base_price, p.discount_id
+            FROM Shopping_list_item sli
+            JOIN Product p ON sli.product_code = p.product_code
+            WHERE sli.Shopping_list_id = ?
+        ''', (shopping_list_id,))
+        items = gui.cursor.fetchall()
+
+        total_cost = 0
+
+        # calculating the total cost with discounts applied
+        for item in items:
+            product_code, quantity, product_name, base_price, discount_id = item
+
+            discount_rate = self.get_discount_rate_current_order(gui, discount_id)
+
+            item_total_cost = quantity * base_price
+            discounted_cost = item_total_cost * ((100 - discount_rate) / 100)
+            total_cost += discounted_cost
 
         order_history_frame = Frame(customer_tab_7)
         order_history_frame.grid(row=len(gui.order_history_buttons), column=0, columnspan=4, padx=5, pady=5)
