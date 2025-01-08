@@ -53,7 +53,7 @@ def customer_search_products_tab(gui, customer_tab_1, customer_manager):
     supplier_input.grid(row=1, column=3, padx=10, pady=10)
 
     Button(customer_tab_1, text="Search for Product", width=20,
-           command=lambda: search_products(
+           command=lambda: search_products(gui,
                customer_manager, product_id_input.get(), product_name_input.get(),
                base_price_input.get(), supplier_input.get(), product_frame)
            ).grid(row=2, column=1, padx=10, pady=10, sticky="w")
@@ -212,8 +212,12 @@ def show_all_products(customer_manager, product_frame, gui):
         widget.destroy()
 
     products = customer_manager.get_all_products(gui)
+
     for product in products:
-        add_product_to_frame(product_frame, product, gui, customer_manager)
+
+        discount_rate = customer_manager.get_discount_rate(gui, product)
+
+        add_product_to_frame(product_frame, product, gui, customer_manager, discount_rate)
 
 def display_all_products(customer_manager, product_frame, gui):
 
@@ -222,17 +226,23 @@ def display_all_products(customer_manager, product_frame, gui):
 
     products = customer_manager.get_all_products(gui)
     for product in products:
-        add_product_to_frame(product_frame, product, gui, customer_manager)
+
+        discount_rate = customer_manager.get_discount_rate(gui, product)
+
+        add_product_to_frame(product_frame, product, gui, customer_manager, discount_rate)
 
 
-def search_products(customer_manager, product_id, product_name, base_price, supplier_name, product_frame):
+def search_products(gui, customer_manager, product_id, product_name, base_price, supplier_name, product_frame):
 
     for widget in product_frame.winfo_children():
         widget.destroy()
 
-    products = customer_manager.search_products(product_id, product_name, base_price, supplier_name)
+    products = customer_manager.search_products(gui, product_id, product_name, base_price, supplier_name)
     for product in products:
-        add_product_to_frame(product_frame, product, gui, customer_manager)
+
+        discount_rate = customer_manager.get_discount_rate(gui, product)
+
+        add_product_to_frame(product_frame, product, gui, customer_manager, discount_rate)
 
 
 def show_discounted_products(customer_manager, product_frame, gui):
@@ -242,13 +252,15 @@ def show_discounted_products(customer_manager, product_frame, gui):
 
     discounted_products = customer_manager.get_discounted_products(gui)
     for product, discount_rate in discounted_products:
+        discount_rate = customer_manager.get_discount_rate(gui, product)
         add_product_to_frame(product_frame, product, gui, customer_manager, discount_rate)
 
 
-# adds discount as clickable button
+# adds products as clickable button
 def add_product_to_frame(product_frame, product, gui , customer_manager, discount_rate=0):
-    discount_text = f" (Discount: {discount_rate}%)" if discount_rate else ""
-    btn_text = f"Product ID: {product[0]} | Name: {product[6]} | Price: {round(product[3] * (1 - (discount_rate or 0) / 100), 2)} | Quantity: {product[1]} | Supplier: {product[5]}{discount_text}"
+
+    print("here's discount rates in customer menu product menu")
+    print(discount_rate)
 
     next_row = len(product_frame.grid_slaves())
 
@@ -307,6 +319,7 @@ def customer_logout_function(gui, customer_manager):
     if customer_manager.get_customer_logged_in() == True:
         customer_manager.set_customer_logged_in(False)
         customer_manager.set_current_user_name("")
+        messagebox.showerror("Error", "Customer got logged out")
     else:
         messagebox.showerror("Error", "Customer is not logged in")
 
@@ -321,55 +334,53 @@ def customer_current_order_tab(customer_tab_6, gui, customer_manager):
 
     current_user_name = customer_manager.get_current_user_name()
 
+    print("current user")
+    print(current_user_name)
+
+    # gets the shopping list from the current user that hasn't been confirmed by admin
     gui.cursor.execute(
         'SELECT Shopping_list_id FROM Shopping_list WHERE username = ? AND confirmed_order = FALSE ORDER BY Shopping_list_id DESC LIMIT 1',
         (current_user_name,))
     active_shopping_list = gui.cursor.fetchone()
 
+
     if active_shopping_list:
         shopping_list_id = active_shopping_list[0]
-        gui.cursor.execute('SELECT * FROM Shopping_list_item WHERE Shopping_list_id = ? AND ordered = FALSE',
-                           (shopping_list_id,))
+        gui.cursor.execute('''
+                SELECT sli.product_code, sli.quantity, p.product_name, p.base_price, p.discount_id
+                FROM Shopping_list_item sli
+                JOIN Product p ON sli.product_code = p.product_code
+                WHERE sli.Shopping_list_id = ? AND sli.ordered = FALSE
+            ''', (shopping_list_id,))
         products = gui.cursor.fetchall()
     else:
         products = []
 
-    result_text.delete('1.0', tk.END)
     total_cost = 0
 
     for product in products:
-        gui.cursor.execute('SELECT * FROM Product WHERE product_code = ?', (product[2],))
-        product_details = gui.cursor.fetchone()
+        product_code, quantity, product_name, base_price, discount_code = product
+        discount_rate = customer_manager.get_discount_rate_current_order(gui, discount_code)
 
-        discount_code = product_details[-1]
+        # calculate item cost
+        item_total_cost = quantity * base_price
+        discounted_cost = item_total_cost * ((100 - discount_rate) / 100)
+        total_cost += discounted_cost
 
-        gui.cursor.execute('''SELECT * FROM Discount_item WHERE discount_code = ? AND product_code = ?''', (discount_code, product[2]))
-        discount = gui.cursor.fetchone()
+        # display product details
+        result_text.insert(
+            tk.END,
+            f"Product Name: {product_name} | Quantity in order: {quantity} | Order cost: {round(discounted_cost, 2)}\n"
+        )
 
-        if discount is not None:
-            if discount[4] < discount[3] < discount[5]:
-                discount_rate = discount[1]
-            else:
-                discount_rate = 0
-        else:
-            discount_rate = 0
-
-        if product_details:
-            item_total_cost = product[3] * product_details[3]
-            discounted_cost = item_total_cost * ((100 - float(discount_rate)) / 100)
-            total_cost += discounted_cost
-            result_text.insert(tk.END,
-                               f"Product Name: {product_details[6]} Quantity in order: {product[3]} Order cost: {round(discounted_cost, 2)}\n")
-
-
-    submit_supplier_info_label = ttk.Button(customer_tab_6, text="Place order", width=40, command=lambda: customer_manager.customer_place_order(gui))
+    submit_supplier_info_label = ttk.Button(customer_tab_6, text="Place order", width=40,
+                                            command=lambda: customer_manager.customer_place_order(gui))
     submit_supplier_info_label.grid(row=6, column=1, padx=10, pady=10, sticky="w")
 
     customer_menu(gui, customer_manager)
 
 
 def customer_order_history_tab(customer_tab_7, gui, customer_manager):
-
 
     gui.cursor.execute("SELECT * FROM Shopping_list WHERE username = ? AND placed_order = TRUE", (customer_manager.get_current_user_name(),))
     shopping_lists = gui.cursor.fetchall()
