@@ -30,12 +30,10 @@ if __name__ == '__main__':
         cursor = db_manager.conn.cursor()
         cursor.execute("BEGIN")
 
-        # Check if supplier exists
         cursor.execute('SELECT 1 FROM Supplier WHERE supplier_name = ?', ("supplier",))
         if cursor.fetchone() is None:
             raise ValueError("Supplier 'supplier' does not exist")
 
-        # Insert product
         cursor.execute('''
             INSERT INTO Product (
                 product_code,
@@ -67,13 +65,10 @@ if __name__ == '__main__':
     gui.switch_to_customer_menu = switch_to_customer_menu
     gui.switch_to_admin_menu = switch_to_admin_menu
 
-    # init main menu method
     MainMenu.init_main_menu(
         gui,
         switch_to_customer_menu,
         switch_to_admin_menu
     )
 
-
-    # Run the application
     gui.run()
