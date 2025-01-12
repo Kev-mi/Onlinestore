@@ -13,12 +13,10 @@ from model.AdminManager import AdminManager
 import datetime
 
 if __name__ == '__main__':
-
     db_manager = DatabaseManager('online_store.db')
     init_tables(db_manager.cursor)
     init_admin(db_manager.cursor)
 
-    # init the GUI with the connection
     gui = Gui(db_manager.conn)
 
     customer_manager = CustomerManager()
@@ -27,14 +25,8 @@ if __name__ == '__main__':
     gui.set_current_date(datetime.date.today().strftime("%Y-%m-%d"))
 
     try:
-        cursor = db_manager.conn.cursor()
-        cursor.execute("BEGIN")
 
-        cursor.execute('SELECT 1 FROM Supplier WHERE supplier_name = ?', ("supplier",))
-        if cursor.fetchone() is None:
-            raise ValueError("Supplier 'supplier' does not exist")
-
-        cursor.execute('''
+        db_manager.execute_query('''
             INSERT INTO Product (
                 product_code,
                 quantity_in_stock,
@@ -45,13 +37,13 @@ if __name__ == '__main__':
                 product_name,
                 maximum_orders_per_month
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (100, 1000, 0, 10, 10, "supplier", "product", 10000))
+        ''', (100, 1000, 0, 10, 10, "supplier", "product100", 10000))
 
-        db_manager.conn.commit()
+        db_manager.commit_transaction()
         print("Product inserted successfully!")
 
     except Exception as e:
-        db_manager.conn.rollback()
+        db_manager.rollback_transaction()
         print("Failed to insert product:", e)
         raise
 
@@ -60,7 +52,6 @@ if __name__ == '__main__':
 
     def switch_to_admin_menu():
         MainMenu.verifyAdminLogin(gui, AdminMenu, admin_manager)
-
 
     gui.switch_to_customer_menu = switch_to_customer_menu
     gui.switch_to_admin_menu = switch_to_admin_menu
